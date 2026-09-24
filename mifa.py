@@ -247,6 +247,10 @@ def print_result(
         "build_dir"
     ]
 
+    build_id = result[
+        "build_id"
+    ]
+
     output = manifest.get(
         "output",
         {}
@@ -263,12 +267,10 @@ def print_result(
     print()
     print("[+] Build completed")
     print(
-        f"Build ID : "
-        f"{result['build_id']}"
+        f"Build ID : {build_id}"
     )
     print(
-        f"Output   : "
-        f"{output_file}"
+        f"Output   : {output_file}"
     )
     print(
         f"SHA256   : "
@@ -278,6 +280,85 @@ def print_result(
         f"Manifest : "
         f"{build_dir / 'build.json'}"
     )
+
+    print()
+    print("Preflight")
+    print("-" * 46)
+
+    try:
+        preflight = BuildPreflight(
+            ROOT
+        ).verify(
+            build_id
+        )
+
+        roundtrip = preflight[
+            "payload_roundtrip"
+        ]
+
+        print(
+            f"Hash match  : "
+            f"{preflight['hash_match']}"
+        )
+
+        print(
+            f"Architecture: "
+            f"{preflight['actual_arch']} "
+            f"(expected "
+            f"{preflight['expected_arch']})"
+        )
+
+        print(
+            f"Arch match  : "
+            f"{preflight['arch_match']}"
+        )
+
+        print(
+            "Round-trip  : "
+            + (
+                "N/A"
+                if roundtrip is None
+                else str(roundtrip)
+            )
+        )
+
+        print(
+            f"Result      : "
+            f"{preflight['result']}"
+        )
+
+    except Exception as exc:
+        print(
+            f"Preflight   : ERROR ({exc})"
+        )
+
+    print()
+    print("Report")
+    print("-" * 46)
+
+    try:
+        exporter = ReportExporter(
+            ROOT
+        )
+
+        report = exporter.export(
+            build_id
+        )
+
+        print(
+            f"Build copy : "
+            f"{report['build']}"
+        )
+
+        print(
+            f"Report     : "
+            f"{report['report']}"
+        )
+
+    except Exception as exc:
+        print(
+            f"Report     : ERROR ({exc})"
+        )
 
 
 def interactive_build(
@@ -337,19 +418,44 @@ def interactive_build(
             []
         )
 
-        provider = choose(
-            "\nPayload provider:",
-            providers,
+        provider_labels = {
+            "file":
+                "Existing file",
+
+            "external":
+                "External artifact",
+        }
+
+        display_providers = [
+            provider_labels.get(
+                item,
+                item
+            )
+            for item in providers
+        ]
+
+        selected_provider = choose(
+            "\nPayload:",
+            display_providers,
+        )
+
+        provider = next(
+            item
+            for item in providers
+            if provider_labels.get(
+                item,
+                item
+            ) == selected_provider
         )
 
         print()
         payload = input(
-            "Payload path:\n> "
+            "File path:\n> "
         ).strip()
 
         if provider == "external":
             producer = input(
-                "\nExternal producer name:\n> "
+                "\nProducer name [optional]:\n> "
             ).strip()
 
             provider_options[
@@ -535,6 +641,121 @@ def interactive_build(
     )
 
 
+def interactive_builds():
+    while True:
+        print()
+        show_builds()
+
+        build_id = input(
+            "\nBuild ID "
+            "[Enter to go back]:\n> "
+        ).strip()
+
+        if not build_id:
+            return
+
+        try:
+            load_manifest(
+                build_id
+            )
+
+        except Exception as exc:
+            print(
+                f"\n[!] {exc}"
+            )
+            continue
+
+        while True:
+            print()
+            print(
+                f"Build {build_id}"
+            )
+            print("-" * 46)
+            print("[1] Preflight")
+            print("[2] Report")
+            print("[3] Details")
+            print("[0] Back")
+
+            selection = input(
+                "\n> "
+            ).strip()
+
+            try:
+                if selection == "1":
+                    result = BuildPreflight(
+                        ROOT
+                    ).verify(
+                        build_id
+                    )
+
+                    roundtrip = result[
+                        "payload_roundtrip"
+                    ]
+
+                    print()
+                    print("Preflight")
+                    print("-" * 46)
+
+                    print(
+                        f"Status      : "
+                        f"{result['status']}"
+                    )
+
+                    print(
+                        f"Hash match  : "
+                        f"{result['hash_match']}"
+                    )
+
+                    print(
+                        f"Architecture: "
+                        f"{result['actual_arch']} "
+                        f"(expected "
+                        f"{result['expected_arch']})"
+                    )
+
+                    print(
+                        f"Arch match  : "
+                        f"{result['arch_match']}"
+                    )
+
+                    print(
+                        "Round-trip  : "
+                        + (
+                            "N/A"
+                            if roundtrip is None
+                            else str(roundtrip)
+                        )
+                    )
+
+                    print(
+                        f"Result      : "
+                        f"{result['result']}"
+                    )
+
+                elif selection == "2":
+                    export_report(
+                        build_id
+                    )
+
+                elif selection == "3":
+                    show_build(
+                        build_id
+                    )
+
+                elif selection == "0":
+                    break
+
+                else:
+                    print(
+                        "\nInvalid selection."
+                    )
+
+            except Exception as exc:
+                print(
+                    f"\n[!] {exc}"
+                )
+
+
 def interactive_menu():
     builder = OperationalBuilder(
         ROOT
@@ -544,11 +765,8 @@ def interactive_menu():
         banner()
 
         print("[1] Build")
-        print("[2] Payloads")
+        print("[2] Builds")
         print("[3] Techniques")
-        print("[4] Builds")
-        print("[5] Report")
-        print("[6] Show Build")
         print("[0] Exit")
 
         selection = input(
@@ -562,46 +780,11 @@ def interactive_menu():
                 )
 
             elif selection == "2":
-                print()
-                print(
-                    "Payload providers:"
-                )
-
-                for provider in list_providers():
-                    print(
-                        f"- {provider}"
-                    )
-
-                print()
-                print(
-                    "external imports an artifact "
-                    "already produced by another tool."
-                )
+                interactive_builds()
 
             elif selection == "3":
                 show_techniques(
                     builder.registry
-                )
-
-            elif selection == "4":
-                show_builds()
-
-            elif selection == "5":
-                build_id = input(
-                    "\nBuild ID:\n> "
-                ).strip()
-
-                export_report(
-                    build_id
-                )
-
-            elif selection == "6":
-                build_id = input(
-                    "\nBuild ID:\n> "
-                ).strip()
-
-                show_build(
-                    build_id
                 )
 
             elif selection == "0":
@@ -863,9 +1046,17 @@ def main():
                 f"{result['arch_match']}"
             )
 
+            roundtrip = result[
+                "payload_roundtrip"
+            ]
+
             print(
-                f"Round-trip  : "
-                f"{result['payload_roundtrip']}"
+                "Round-trip  : "
+                + (
+                    "N/A"
+                    if roundtrip is None
+                    else str(roundtrip)
+                )
             )
 
             print()
