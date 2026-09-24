@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from core.operational_builder import OperationalBuilder
+from core.preflight import BuildPreflight
 from core.reporting import ReportExporter
 from providers import list_providers
 
@@ -325,6 +326,7 @@ def interactive_build(
     payload_type = None
     transform = None
     provider_options = {}
+    pipeline_options = {}
 
     if method.get(
         "requires_payload",
@@ -392,6 +394,49 @@ def interactive_build(
             )
         )
 
+    if method.get(
+        "requires_payload",
+        False
+    ):
+        crypto_transform = choose(
+            "\nTransform:",
+            [
+                "none",
+                "xor",
+                "aes-256-cbc",
+                "aes-256-gcm",
+            ],
+        )
+
+        encoding = choose(
+            "\nEncoding:",
+            [
+                "none",
+                "base64",
+                "hex",
+            ],
+        )
+
+        compression = choose(
+            "\nCompression:",
+            [
+                "none",
+                "gzip",
+                "deflate",
+            ],
+        )
+
+        pipeline_options = {
+            "transform":
+                crypto_transform,
+
+            "encoding":
+                encoding,
+
+            "compression":
+                compression,
+        }
+
     runtime_arguments = method.get(
         "runtime_arguments",
         []
@@ -422,6 +467,13 @@ def interactive_build(
         )
         print(
             f"Transform    : {transform}"
+        )
+
+        print(
+            "Processing   : "
+            f"{pipeline_options.get('transform', 'none')} / "
+            f"{pipeline_options.get('encoding', 'none')} / "
+            f"{pipeline_options.get('compression', 'none')}"
         )
 
     else:
@@ -475,6 +527,7 @@ def interactive_build(
         transform=transform,
         build_type="release",
         provider_options=provider_options,
+        pipeline_options=pipeline_options,
     )
 
     print_result(
@@ -621,6 +674,41 @@ def build_parser():
     )
 
     build.add_argument(
+        "--crypto",
+        choices=[
+            "none",
+            "xor",
+            "aes-256-cbc",
+            "aes-256-gcm",
+        ],
+        default="none",
+    )
+
+    build.add_argument(
+        "--encoding",
+        choices=[
+            "none",
+            "base64",
+            "hex",
+        ],
+        default="none",
+    )
+
+    build.add_argument(
+        "--compression",
+        choices=[
+            "none",
+            "gzip",
+            "deflate",
+        ],
+        default="none",
+    )
+
+    build.add_argument(
+        "--key-hex",
+    )
+
+    build.add_argument(
         "--build-type",
         choices=[
             "release",
@@ -667,6 +755,14 @@ def build_parser():
 
     sub.add_parser(
         "payloads"
+    )
+
+    preflight = sub.add_parser(
+        "preflight"
+    )
+
+    preflight.add_argument(
+        "build_id"
     )
 
     return parser
@@ -723,6 +819,73 @@ def main():
             )
             return 1
 
+    if args.command == "preflight":
+        try:
+            result = BuildPreflight(
+                ROOT
+            ).verify(
+                args.build_id
+            )
+
+            print()
+            print("Preflight")
+            print("-" * 46)
+
+            print(
+                f"Build       : "
+                f"{result['build_id']}"
+            )
+
+            print(
+                f"Status      : "
+                f"{result['status']}"
+            )
+
+            print(
+                f"Artifact    : "
+                f"{result['artifact']}"
+            )
+
+            print(
+                f"Hash match  : "
+                f"{result['hash_match']}"
+            )
+
+            print(
+                f"Architecture: "
+                f"{result['actual_arch']} "
+                f"(expected "
+                f"{result['expected_arch']})"
+            )
+
+            print(
+                f"Arch match  : "
+                f"{result['arch_match']}"
+            )
+
+            print(
+                f"Round-trip  : "
+                f"{result['payload_roundtrip']}"
+            )
+
+            print()
+            print(
+                f"Result      : "
+                f"{result['result']}"
+            )
+
+            return (
+                0
+                if result["result"] == "PASS"
+                else 1
+            )
+
+        except Exception as exc:
+            print(
+                f"[!] {exc}"
+            )
+            return 1
+
     if args.command == "payloads":
         for provider in list_providers():
             print(
@@ -733,6 +896,20 @@ def main():
 
     if args.command == "build":
         provider_options = {}
+
+        pipeline_options = {
+            "transform":
+                args.crypto,
+
+            "encoding":
+                args.encoding,
+
+            "compression":
+                args.compression,
+
+            "key_hex":
+                args.key_hex,
+        }
 
         if args.producer:
             provider_options[
@@ -750,6 +927,7 @@ def main():
                 build_type=args.build_type,
                 cli_parameters=args.set,
                 provider_options=provider_options,
+                pipeline_options=pipeline_options,
             )
 
         except Exception as exc:

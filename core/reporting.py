@@ -174,6 +174,25 @@ class ReportExporter:
             "",
         ])
 
+        pipeline = payload.get(
+            "pipeline"
+        ) or {}
+
+        if pipeline:
+            lines.extend([
+                "## Payload Processing",
+                "",
+                f"- Transform: `{pipeline.get('transform', 'none')}`",
+                f"- Encoding: `{pipeline.get('encoding', 'none')}`",
+                f"- Compression: `{pipeline.get('compression', 'none')}`",
+                f"- Input size: {pipeline.get('input_size', '')}",
+                f"- Output size: {pipeline.get('output_size', '')}",
+                f"- Input SHA256: `{pipeline.get('input_sha256', '')}`",
+                f"- Output SHA256: `{pipeline.get('output_sha256', '')}`",
+                f"- Round-trip match: `{pipeline.get('roundtrip_match', '')}`",
+                "",
+            ])
+
         return "\n".join(
             lines
         )

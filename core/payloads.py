@@ -6,6 +6,8 @@ import json
 import mimetypes
 import shutil
 
+from core.transforms import TransformPipeline
+
 
 class PayloadManager:
     SUPPORTED_TYPES = {
@@ -264,7 +266,8 @@ class PayloadManager:
         build_dir: Path,
         method,
         payload_type,
-        transform=None
+        transform=None,
+        pipeline=None
     ):
         payload_path = (
             payload_path
@@ -382,23 +385,87 @@ class PayloadManager:
             exist_ok=True
         )
 
-        staged_name = (
-            self._transform_name(
-                payload_path.name,
-                selected_transform
+        pipeline = (
+            pipeline or {}
+        )
+
+        crypto_transform = pipeline.get(
+            "transform",
+            "none"
+        )
+
+        encoding = pipeline.get(
+            "encoding",
+            "none"
+        )
+
+        compression = pipeline.get(
+            "compression",
+            "none"
+        )
+
+        pipeline_active = any([
+            crypto_transform != "none",
+            encoding != "none",
+            compression != "none",
+        ])
+
+        pipeline_info = None
+
+        if pipeline_active:
+            if selected_transform != "copy":
+                raise ValueError(
+                    "Processing pipeline cannot be "
+                    "combined with legacy payload "
+                    "transform"
+                )
+
+            staged_name = (
+                payload_path.name
+                + ".mifa"
             )
-        )
 
-        destination = (
-            input_dir
-            / staged_name
-        )
+            destination = (
+                input_dir
+                / staged_name
+            )
 
-        self._write_transformed(
-            source=payload_path,
-            destination=destination,
-            transform=selected_transform
-        )
+            engine = TransformPipeline()
+
+            output_data, pipeline_info = (
+                engine.apply(
+                    payload_path.read_bytes(),
+                    transform=crypto_transform,
+                    encoding=encoding,
+                    compression=compression,
+                    key_hex=pipeline.get(
+                        "key_hex"
+                    ),
+                )
+            )
+
+            destination.write_bytes(
+                output_data
+            )
+
+        else:
+            staged_name = (
+                self._transform_name(
+                    payload_path.name,
+                    selected_transform
+                )
+            )
+
+            destination = (
+                input_dir
+                / staged_name
+            )
+
+            self._write_transformed(
+                source=payload_path,
+                destination=destination,
+                transform=selected_transform
+            )
 
         source_sha256 = (
             self._sha256(
@@ -476,6 +543,9 @@ class PayloadManager:
 
             "staged":
                 staged,
+
+            "pipeline":
+                pipeline_info,
 
             # Backward-compatible staged fields.
             "file":

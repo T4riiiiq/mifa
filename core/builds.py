@@ -248,6 +248,11 @@ class BuildManager:
                     "copy"
                 ),
 
+            "pipeline":
+                payload_info.get(
+                    "pipeline"
+                ),
+
             "source":
                 payload_info.get(
                     "source"

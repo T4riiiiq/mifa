@@ -43,7 +43,8 @@ class OperationalBuilder:
         transform=None,
         build_type="release",
         cli_parameters=None,
-        provider_options=None
+        provider_options=None,
+        pipeline_options=None
     ):
         method = self.registry.get(
             technique
@@ -188,6 +189,7 @@ class OperationalBuilder:
                         method=method,
                         payload_type=payload_type,
                         transform=transform,
+                        pipeline=pipeline_options,
                     )
                 )
 
