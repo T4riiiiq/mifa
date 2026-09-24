@@ -10,7 +10,9 @@ class MethodSchemaValidator:
         "requires_payload",
         "payload_types",
         "sources",
-        "output_name"
+        "output_name",
+        "operational",
+        "providers"
     ]
 
     SUPPORTED_ARCHITECTURES = {
@@ -62,13 +64,7 @@ class MethodSchemaValidator:
         "hex"
     }
 
-    SUPPORTED_TECHNIQUE_ROLES = {
-        "technique",
-        "helper",
-        "inspect"
-    }
-
-    SUPPORTED_TECHNIQUE_RUNTIMES = {
+    SUPPORTED_OPERATIONAL_RUNTIMES = {
         "native",
         "managed",
         "script",
@@ -76,7 +72,7 @@ class MethodSchemaValidator:
         "mixed"
     }
 
-    SUPPORTED_TECHNIQUE_PRIVILEGES = {
+    SUPPORTED_OPERATIONAL_PRIVILEGES = {
         "user",
         "admin",
         "system",
@@ -84,13 +80,19 @@ class MethodSchemaValidator:
         "varies"
     }
 
-    SUPPORTED_TECHNIQUE_VALIDATION = {
+    SUPPORTED_OPERATIONAL_VALIDATION = {
         "planned",
         "build-tested",
         "runtime-tested"
     }
 
-    TECHNIQUE_ALIAS = re.compile(
+    SUPPORTED_PAYLOAD_PROVIDERS = {
+        "file",
+        "external",
+        "fixture"
+    }
+
+    OPERATIONAL_ALIAS = re.compile(
         r"^[a-z][a-z0-9-]*$"
     )
 
@@ -98,148 +100,191 @@ class MethodSchemaValidator:
         r"^[A-Za-z_][A-Za-z0-9_]*$"
     )
 
-    def _validate_technique(
+    def _validate_operational(
         self,
         method,
         errors
     ):
-        technique = method.get(
-            "technique"
+        if "technique" in method:
+            errors.append(
+                "legacy technique metadata is not supported; "
+                "use operational"
+            )
+
+        operational = method.get(
+            "operational"
         )
 
-        if technique is None:
-            return
-
         if not isinstance(
-            technique,
+            operational,
             dict
         ):
             errors.append(
-                "technique must be an object"
+                "operational must be an object"
             )
             return
 
         required_fields = [
             "alias",
             "category",
-            "role",
-            "quick",
             "runtime",
             "privilege",
+            "deployable",
             "validation"
         ]
 
         for field in required_fields:
-            if field not in technique:
+            if field not in operational:
                 errors.append(
-                    f"technique missing required field: {field}"
+                    f"operational missing required field: {field}"
                 )
 
-        alias = technique.get(
+        alias = operational.get(
             "alias"
         )
 
         if (
             alias is not None
             and (
-                not isinstance(
-                    alias,
-                    str
-                )
-                or not self.TECHNIQUE_ALIAS.match(
-                    alias
-                )
+                not isinstance(alias, str)
+                or not self.OPERATIONAL_ALIAS.match(alias)
             )
         ):
             errors.append(
-                "technique.alias must be a lowercase "
+                "operational.alias must be a lowercase "
                 "CLI-safe alias"
             )
 
-        category = technique.get(
+        category = operational.get(
             "category"
         )
 
         if (
             category is not None
             and (
-                not isinstance(
-                    category,
-                    str
-                )
+                not isinstance(category, str)
                 or not category.strip()
             )
         ):
             errors.append(
-                "technique.category must be a "
+                "operational.category must be a "
                 "non-empty string"
             )
 
-        role = technique.get(
-            "role"
-        )
-
-        if (
-            role is not None
-            and role not in self.SUPPORTED_TECHNIQUE_ROLES
-        ):
-            errors.append(
-                f"Unsupported technique role: {role}"
-            )
-
-        quick = technique.get(
-            "quick"
-        )
-
-        if (
-            quick is not None
-            and not isinstance(
-                quick,
-                bool
-            )
-        ):
-            errors.append(
-                "technique.quick must be true or false"
-            )
-
-        runtime = technique.get(
+        runtime = operational.get(
             "runtime"
         )
 
         if (
             runtime is not None
             and runtime
-            not in self.SUPPORTED_TECHNIQUE_RUNTIMES
+            not in self.SUPPORTED_OPERATIONAL_RUNTIMES
         ):
             errors.append(
-                f"Unsupported technique runtime: {runtime}"
+                f"Unsupported operational runtime: {runtime}"
             )
 
-        privilege = technique.get(
+        privilege = operational.get(
             "privilege"
         )
 
         if (
             privilege is not None
             and privilege
-            not in self.SUPPORTED_TECHNIQUE_PRIVILEGES
+            not in self.SUPPORTED_OPERATIONAL_PRIVILEGES
         ):
             errors.append(
-                f"Unsupported technique privilege: {privilege}"
+                f"Unsupported operational privilege: {privilege}"
             )
 
-        validation = technique.get(
+        deployable = operational.get(
+            "deployable"
+        )
+
+        if (
+            deployable is not None
+            and not isinstance(
+                deployable,
+                bool
+            )
+        ):
+            errors.append(
+                "operational.deployable must be true or false"
+            )
+
+        validation = operational.get(
             "validation"
         )
 
         if (
             validation is not None
             and validation
-            not in self.SUPPORTED_TECHNIQUE_VALIDATION
+            not in self.SUPPORTED_OPERATIONAL_VALIDATION
         ):
             errors.append(
-                f"Unsupported technique validation: {validation}"
+                f"Unsupported operational validation: "
+                f"{validation}"
             )
+
+    def _validate_providers(
+        self,
+        method,
+        errors
+    ):
+        providers = method.get(
+            "providers"
+        )
+
+        if not isinstance(
+            providers,
+            list
+        ):
+            errors.append(
+                "providers must be a list"
+            )
+            return
+
+        requires_payload = method.get(
+            "requires_payload"
+        )
+
+        if (
+            requires_payload is True
+            and not providers
+        ):
+            errors.append(
+                "payload-required methods must declare "
+                "at least one provider"
+            )
+
+        if (
+            requires_payload is False
+            and providers
+        ):
+            errors.append(
+                "methods without payloads must not "
+                "declare providers"
+            )
+
+        seen = set()
+
+        for provider in providers:
+            if provider in seen:
+                errors.append(
+                    f"Duplicate provider: {provider}"
+                )
+                continue
+
+            seen.add(provider)
+
+            if (
+                provider
+                not in self.SUPPORTED_PAYLOAD_PROVIDERS
+            ):
+                errors.append(
+                    f"Unsupported payload provider: "
+                    f"{provider}"
+                )
 
     def _validate_payload_contract(
         self,
@@ -1032,7 +1077,12 @@ class MethodSchemaValidator:
                 "non-empty string"
             )
 
-        self._validate_technique(
+        self._validate_operational(
+            method,
+            errors
+        )
+
+        self._validate_providers(
             method,
             errors
         )

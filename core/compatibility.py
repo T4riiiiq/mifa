@@ -17,6 +17,12 @@ class CompatibilityChecker:
         "hex"
     }
 
+    SUPPORTED_PAYLOAD_PROVIDERS = {
+        "file",
+        "external",
+        "fixture"
+    }
+
     def _payload_contract(
         self,
         method
@@ -147,6 +153,34 @@ class CompatibilityChecker:
 
         return errors
 
+    def validate_provider(
+        self,
+        method,
+        provider
+    ):
+        errors = []
+
+        if provider not in self.SUPPORTED_PAYLOAD_PROVIDERS:
+            errors.append(
+                f"Unsupported payload provider: "
+                f"'{provider}'"
+            )
+            return errors
+
+        allowed = method.get(
+            "providers",
+            []
+        )
+
+        if provider not in allowed:
+            errors.append(
+                f"Payload provider '{provider}' is not "
+                f"supported by method "
+                f"'{method.get('id')}'"
+            )
+
+        return errors
+
     def validate(
         self,
         method,
@@ -154,6 +188,7 @@ class CompatibilityChecker:
         payload_path=None,
         payload_type=None,
         payload_transform=None,
+        payload_provider=None,
         parameter_errors=None
     ):
         errors = self.validate_preset(
@@ -217,7 +252,27 @@ class CompatibilityChecker:
                 "without a payload"
             )
 
+        if (
+            payload_path is None
+            and payload_provider is not None
+        ):
+            errors.append(
+                "Payload provider was specified "
+                "without a payload"
+            )
+
         if payload_path is not None:
+            if payload_provider is None:
+                errors.append(
+                    "Payload provider must be specified"
+                )
+            else:
+                errors.extend(
+                    self.validate_provider(
+                        method=method,
+                        provider=payload_provider
+                    )
+                )
             if payload_type is None:
                 errors.append(
                     "Payload type must be "
