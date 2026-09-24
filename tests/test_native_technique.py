@@ -98,6 +98,16 @@ class NativeTechniqueTests(unittest.TestCase):
             arguments,
         )
 
+    def test_native_is_runtime_tested(self):
+        self.assertEqual(
+            self.method[
+                "operational"
+            ][
+                "validation"
+            ],
+            "runtime-tested",
+        )
+
     def test_native_uses_unicode_entrypoint(self):
         self.assertIn(
             "-municode",
