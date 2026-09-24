@@ -228,13 +228,17 @@ class BuildManager:
         self,
         build_dir: Path,
         payload_info,
-        payload_type
+        payload_type,
+        provider_info=None
     ):
         data = self._read_manifest(
             build_dir
         )
 
         data["payload"] = {
+            "provider":
+                provider_info,
+
             "type":
                 payload_type,
 
