@@ -794,6 +794,37 @@ class MethodSchemaValidator:
                     "be a string"
                 )
 
+    def _validate_compiler_flags(
+        self,
+        method,
+        errors
+    ):
+        flags = method.get(
+            "compiler_flags",
+            []
+        )
+
+        if not isinstance(
+            flags,
+            list
+        ):
+            errors.append(
+                "compiler_flags must be a list"
+            )
+            return
+
+        for index, flag in enumerate(
+            flags
+        ):
+            if (
+                not isinstance(flag, str)
+                or not flag.strip()
+            ):
+                errors.append(
+                    f"compiler_flags[{index}] must "
+                    "be a non-empty string"
+                )
+
     def _validate_build_types(
         self,
         method,
@@ -1111,6 +1142,11 @@ class MethodSchemaValidator:
         )
 
         self._validate_runtime_arguments(
+            method,
+            errors
+        )
+
+        self._validate_compiler_flags(
             method,
             errors
         )

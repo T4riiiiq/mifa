@@ -320,70 +320,81 @@ def interactive_build(
         ),
     )
 
-    providers = method.get(
-        "providers",
-        []
-    )
-
-    provider = choose(
-        "\nPayload provider:",
-        providers,
-    )
-
-    print()
-    payload = input(
-        "Payload path:\n> "
-    ).strip()
-
+    provider = None
+    payload = None
+    payload_type = None
+    transform = None
     provider_options = {}
 
-    if provider == "external":
-        producer = input(
-            "\nExternal producer name:\n> "
+    if method.get(
+        "requires_payload",
+        False
+    ):
+        providers = method.get(
+            "providers",
+            []
+        )
+
+        provider = choose(
+            "\nPayload provider:",
+            providers,
+        )
+
+        print()
+        payload = input(
+            "Payload path:\n> "
         ).strip()
 
-        provider_options[
-            "producer"
-        ] = (
-            producer
-            or "external"
+        if provider == "external":
+            producer = input(
+                "\nExternal producer name:\n> "
+            ).strip()
+
+            provider_options[
+                "producer"
+            ] = (
+                producer
+                or "external"
+            )
+
+        contract = method.get(
+            "payload_contract",
+            {}
         )
 
-    contract = method.get(
-        "payload_contract",
-        {}
-    )
+        payload_types = contract.get(
+            "types",
+            []
+        )
 
-    payload_types = contract.get(
-        "types",
+        if len(payload_types) == 1:
+            payload_type = payload_types[0]
+
+        elif payload_types:
+            payload_type = choose(
+                "\nPayload type:",
+                payload_types,
+            )
+
+        transforms = contract.get(
+            "transforms",
+            [
+                "copy"
+            ],
+        )
+
+        transform = (
+            transforms[0]
+            if len(transforms) == 1
+            else choose(
+                "\nPayload transform:",
+                transforms,
+            )
+        )
+
+    runtime_arguments = method.get(
+        "runtime_arguments",
         []
-    )
-
-    payload_type = None
-
-    if len(payload_types) == 1:
-        payload_type = payload_types[0]
-
-    elif payload_types:
-        payload_type = choose(
-            "\nPayload type:",
-            payload_types,
-        )
-
-    transforms = contract.get(
-        "transforms",
-        [
-            "copy"
-        ],
-    )
-
-    transform = (
-        transforms[0]
-        if len(transforms) == 1
-        else choose(
-            "\nPayload transform:",
-            transforms,
-        )
     )
 
     print()
@@ -395,27 +406,48 @@ def interactive_build(
     print(
         f"Architecture : {architecture}"
     )
-    print(
-        f"Provider     : {provider}"
-    )
 
-    if provider_options.get(
-        "producer"
+    if method.get(
+        "requires_payload",
+        False
     ):
         print(
-            f"Producer     : "
-            f"{provider_options['producer']}"
+            f"Provider     : {provider}"
+        )
+        print(
+            f"Payload      : {payload}"
+        )
+        print(
+            f"Payload type : {payload_type}"
+        )
+        print(
+            f"Transform    : {transform}"
         )
 
-    print(
-        f"Payload      : {payload}"
-    )
-    print(
-        f"Payload type : {payload_type}"
-    )
-    print(
-        f"Transform    : {transform}"
-    )
+    else:
+        print(
+            "Payload      : not required"
+        )
+
+    if runtime_arguments:
+        print()
+        print("Runtime Arguments")
+
+        for argument in runtime_arguments:
+            requirement = (
+                "required"
+                if argument.get(
+                    "required",
+                    True
+                )
+                else "optional"
+            )
+
+            print(
+                f"- {argument.get('name')} "
+                f"({argument.get('type')}, "
+                f"{requirement})"
+            )
 
     confirm = input(
         "\nBuild? [Y/n]\n> "
@@ -435,7 +467,10 @@ def interactive_build(
         technique=technique,
         architecture=architecture,
         payload_source=payload,
-        provider_id=provider,
+        provider_id=(
+            provider
+            or "file"
+        ),
         payload_type=payload_type,
         transform=transform,
         build_type="release",
@@ -557,7 +592,6 @@ def build_parser():
 
     build.add_argument(
         "--payload",
-        required=True,
     )
 
     build.add_argument(

@@ -127,6 +127,15 @@ class Compiler:
                 f"{build_type}"
             )
 
+        compiler_flags = method.get(
+            "compiler_flags",
+            []
+        )
+
+        command.extend(
+            compiler_flags
+        )
+
         result = subprocess.run(
             command,
             capture_output=True,
