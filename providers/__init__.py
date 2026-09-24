@@ -1,8 +1,10 @@
+from providers.external import ExternalProvider
 from providers.file import FileProvider
 
 
 PROVIDERS = {
     "file": FileProvider,
+    "external": ExternalProvider,
 }
 
 
@@ -20,3 +22,9 @@ def get_provider(
         )
 
     return provider_class()
+
+
+def list_providers():
+    return sorted(
+        PROVIDERS
+    )

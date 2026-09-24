@@ -16,6 +16,7 @@
     "runtime": "native",
     "privilege": "user",
     "deployable": true,
+    "hidden": true,
     "validation": "planned"
   },
   "requires_payload": true,
@@ -35,7 +36,8 @@
     "max_size_bytes": 10485760
   },
   "providers": [
-    "file"
+    "file",
+    "external"
   ],
   "parameters": {},
   "runtime_arguments": [],

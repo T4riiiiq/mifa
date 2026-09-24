@@ -42,7 +42,8 @@ class OperationalBuilder:
         payload_type=None,
         transform=None,
         build_type="release",
-        cli_parameters=None
+        cli_parameters=None,
+        provider_options=None
     ):
         method = self.registry.get(
             technique
@@ -115,7 +116,11 @@ class OperationalBuilder:
             )
 
             provider_result = provider.resolve(
-                payload_source
+                payload_source,
+                **(
+                    provider_options
+                    or {}
+                )
             )
 
             payload_path = provider_result[

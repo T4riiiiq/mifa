@@ -8,7 +8,8 @@ class PayloadProvider(ABC):
     @abstractmethod
     def resolve(
         self,
-        source
+        source,
+        **options
     ):
         raise NotImplementedError
 

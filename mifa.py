@@ -6,7 +6,8 @@ import sys
 from pathlib import Path
 
 from core.operational_builder import OperationalBuilder
-from core.techniques import TechniqueRegistry
+from core.reporting import ReportExporter
+from providers import list_providers
 
 
 ROOT = Path(__file__).resolve().parent
@@ -15,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 def banner():
     print()
     print("Mifa")
-    print("=" * 44)
+    print("=" * 46)
     print("Kali-side Operational Build Framework")
     print()
 
@@ -39,6 +40,7 @@ def choose(
 
         try:
             index = int(value) - 1
+
         except ValueError:
             print("Invalid selection")
             continue
@@ -49,13 +51,48 @@ def choose(
         print("Invalid selection")
 
 
-def show_techniques(
-    registry
+def load_manifest(
+    build_id
 ):
-    techniques = registry.discover()
+    path = (
+        ROOT
+        / "builds"
+        / build_id
+        / "build.json"
+    )
+
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Build not found: {build_id}"
+        )
+
+    return json.loads(
+        path.read_text(
+            encoding="utf-8"
+        )
+    )
+
+
+def show_techniques(
+    registry,
+    include_hidden=False
+):
+    techniques = registry.discover(
+        include_hidden=include_hidden
+    )
 
     if not techniques:
-        print("No operational techniques available.")
+        print(
+            "No user-facing operational "
+            "techniques available."
+        )
+
+        if not include_hidden:
+            print(
+                "Use 'techniques --all' to "
+                "include internal pipeline methods."
+            )
+
         return
 
     print()
@@ -63,10 +100,11 @@ def show_techniques(
         f"{'Alias':<16}"
         f"{'Category':<18}"
         f"{'Runtime':<12}"
+        f"{'State':<10}"
         f"Architectures"
     )
 
-    print("-" * 66)
+    print("-" * 78)
 
     for method in techniques:
         operational = method[
@@ -80,29 +118,51 @@ def show_techniques(
             )
         )
 
+        state = (
+            "internal"
+            if operational.get(
+                "hidden",
+                False
+            )
+            else "visible"
+        )
+
         print(
             f"{operational['alias']:<16}"
             f"{operational['category']:<18}"
             f"{operational['runtime']:<12}"
+            f"{state:<10}"
             f"{architectures}"
         )
 
 
 def show_builds():
-    builds_dir = ROOT / "builds"
-
     manifests = sorted(
-        builds_dir.glob(
+        (
+            ROOT
+            / "builds"
+        ).glob(
             "K-*/build.json"
         ),
         reverse=True,
     )
 
     if not manifests:
-        print("No builds found.")
+        print(
+            "No builds found."
+        )
         return
 
     print()
+    print(
+        f"{'Build':<10}"
+        f"{'Status':<10}"
+        f"{'Method':<24}"
+        f"{'Arch':<8}"
+        f"Output"
+    )
+
+    print("-" * 84)
 
     for path in manifests:
         try:
@@ -111,6 +171,7 @@ def show_builds():
                     encoding="utf-8"
                 )
             )
+
         except Exception:
             continue
 
@@ -124,12 +185,54 @@ def show_builds():
             {}
         )
 
+        output = data.get(
+            "output",
+            {}
+        ) or {}
+
         print(
-            f"{data.get('build_id', '?'):<10} "
-            f"{data.get('status', '?'):<10} "
-            f"{method.get('id', '?'):<22} "
-            f"{preset.get('architecture', '?')}"
+            f"{data.get('build_id', '?'):<10}"
+            f"{data.get('status', '?'):<10}"
+            f"{method.get('id', '?'):<24}"
+            f"{preset.get('architecture', '?'):<8}"
+            f"{output.get('file', '')}"
         )
+
+
+def show_build(
+    build_id
+):
+    data = load_manifest(
+        build_id
+    )
+
+    print(
+        json.dumps(
+            data,
+            indent=2
+        )
+    )
+
+
+def export_report(
+    build_id
+):
+    exporter = ReportExporter(
+        ROOT
+    )
+
+    result = exporter.export(
+        build_id
+    )
+
+    print()
+    print("[+] Report generated")
+    print(
+        f"Build copy : {result['build']}"
+    )
+    print(
+        f"Report     : {result['report']}"
+    )
 
 
 def print_result(
@@ -184,8 +287,10 @@ def interactive_build(
     )
 
     if not techniques:
+        print()
         print(
-            "No operational techniques available."
+            "No user-facing operational "
+            "techniques are installed yet."
         )
         return
 
@@ -207,38 +312,49 @@ def interactive_build(
         technique
     )
 
-    architectures = method.get(
-        "architectures",
+    architecture = choose(
+        "\nArchitecture:",
+        method.get(
+            "architectures",
+            []
+        ),
+    )
+
+    providers = method.get(
+        "providers",
         []
     )
 
-    architecture = choose(
-        "\nArchitecture:",
-        architectures,
+    provider = choose(
+        "\nPayload provider:",
+        providers,
     )
-
-    print()
-    print("Payload source:")
-    print("[1] Existing file")
-
-    while True:
-        selection = input("> ").strip()
-
-        if selection == "1":
-            provider = "file"
-            break
-
-        print("Invalid selection")
 
     print()
     payload = input(
         "Payload path:\n> "
     ).strip()
 
-    payload_types = method.get(
+    provider_options = {}
+
+    if provider == "external":
+        producer = input(
+            "\nExternal producer name:\n> "
+        ).strip()
+
+        provider_options[
+            "producer"
+        ] = (
+            producer
+            or "external"
+        )
+
+    contract = method.get(
         "payload_contract",
         {}
-    ).get(
+    )
+
+    payload_types = contract.get(
         "types",
         []
     )
@@ -254,10 +370,7 @@ def interactive_build(
             payload_types,
         )
 
-    transforms = method.get(
-        "payload_contract",
-        {}
-    ).get(
+    transforms = contract.get(
         "transforms",
         [
             "copy"
@@ -274,8 +387,8 @@ def interactive_build(
     )
 
     print()
-    print("Configuration")
-    print("-" * 44)
+    print("Resolved Configuration")
+    print("-" * 46)
     print(
         f"Technique    : {technique}"
     )
@@ -285,6 +398,15 @@ def interactive_build(
     print(
         f"Provider     : {provider}"
     )
+
+    if provider_options.get(
+        "producer"
+    ):
+        print(
+            f"Producer     : "
+            f"{provider_options['producer']}"
+        )
+
     print(
         f"Payload      : {payload}"
     )
@@ -304,7 +426,9 @@ def interactive_build(
         "y",
         "yes",
     }:
-        print("Build cancelled.")
+        print(
+            "Build cancelled."
+        )
         return
 
     result = builder.build(
@@ -315,6 +439,7 @@ def interactive_build(
         payload_type=payload_type,
         transform=transform,
         build_type="release",
+        provider_options=provider_options,
     )
 
     print_result(
@@ -335,70 +460,78 @@ def interactive_menu():
         print("[3] Techniques")
         print("[4] Builds")
         print("[5] Report")
+        print("[6] Show Build")
         print("[0] Exit")
 
         selection = input(
             "\n> "
         ).strip()
 
-        if selection == "1":
-            try:
+        try:
+            if selection == "1":
                 interactive_build(
                     builder
                 )
-            except Exception as exc:
+
+            elif selection == "2":
+                print()
                 print(
-                    f"\n[!] {exc}"
+                    "Payload providers:"
                 )
 
-            input(
-                "\nPress Enter to continue..."
-            )
+                for provider in list_providers():
+                    print(
+                        f"- {provider}"
+                    )
 
-        elif selection == "2":
-            print()
+                print()
+                print(
+                    "external imports an artifact "
+                    "already produced by another tool."
+                )
+
+            elif selection == "3":
+                show_techniques(
+                    builder.registry
+                )
+
+            elif selection == "4":
+                show_builds()
+
+            elif selection == "5":
+                build_id = input(
+                    "\nBuild ID:\n> "
+                ).strip()
+
+                export_report(
+                    build_id
+                )
+
+            elif selection == "6":
+                build_id = input(
+                    "\nBuild ID:\n> "
+                ).strip()
+
+                show_build(
+                    build_id
+                )
+
+            elif selection == "0":
+                return 0
+
+            else:
+                print(
+                    "\nInvalid selection."
+                )
+
+        except Exception as exc:
             print(
-                "Available payload providers:"
+                f"\n[!] {exc}"
             )
-            print("file")
 
+        if selection != "0":
             input(
                 "\nPress Enter to continue..."
-            )
-
-        elif selection == "3":
-            show_techniques(
-                builder.registry
-            )
-
-            input(
-                "\nPress Enter to continue..."
-            )
-
-        elif selection == "4":
-            show_builds()
-
-            input(
-                "\nPress Enter to continue..."
-            )
-
-        elif selection == "5":
-            print()
-            print(
-                "Report export will be added "
-                "in the next milestone."
-            )
-
-            input(
-                "\nPress Enter to continue..."
-            )
-
-        elif selection == "0":
-            return 0
-
-        else:
-            print(
-                "\nInvalid selection."
             )
 
 
@@ -442,6 +575,10 @@ def build_parser():
     )
 
     build.add_argument(
+        "--producer",
+    )
+
+    build.add_argument(
         "--payload-type",
     )
 
@@ -464,12 +601,38 @@ def build_parser():
         default=[],
     )
 
-    sub.add_parser(
+    techniques = sub.add_parser(
         "techniques"
+    )
+
+    techniques.add_argument(
+        "--all",
+        action="store_true",
+        dest="include_hidden",
     )
 
     sub.add_parser(
         "builds"
+    )
+
+    show = sub.add_parser(
+        "show"
+    )
+
+    show.add_argument(
+        "build_id"
+    )
+
+    report = sub.add_parser(
+        "report"
+    )
+
+    report.add_argument(
+        "build_id"
+    )
+
+    sub.add_parser(
+        "payloads"
     )
 
     return parser
@@ -491,7 +654,8 @@ def main():
 
     if args.command == "techniques":
         show_techniques(
-            builder.registry
+            builder.registry,
+            include_hidden=args.include_hidden,
         )
         return 0
 
@@ -499,7 +663,48 @@ def main():
         show_builds()
         return 0
 
+    if args.command == "show":
+        try:
+            show_build(
+                args.build_id
+            )
+            return 0
+
+        except Exception as exc:
+            print(
+                f"[!] {exc}"
+            )
+            return 1
+
+    if args.command == "report":
+        try:
+            export_report(
+                args.build_id
+            )
+            return 0
+
+        except Exception as exc:
+            print(
+                f"[!] {exc}"
+            )
+            return 1
+
+    if args.command == "payloads":
+        for provider in list_providers():
+            print(
+                provider
+            )
+
+        return 0
+
     if args.command == "build":
+        provider_options = {}
+
+        if args.producer:
+            provider_options[
+                "producer"
+            ] = args.producer
+
         try:
             result = builder.build(
                 technique=args.technique,
@@ -510,6 +715,7 @@ def main():
                 transform=args.transform,
                 build_type=args.build_type,
                 cli_parameters=args.set,
+                provider_options=provider_options,
             )
 
         except Exception as exc:

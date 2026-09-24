@@ -12,7 +12,10 @@ class TechniqueRegistry:
             techniques_dir
         )
 
-    def discover(self):
+    def discover(
+        self,
+        include_hidden=False
+    ):
         techniques = []
 
         for method in self.catalog.discover():
@@ -32,6 +35,15 @@ class TechniqueRegistry:
             ):
                 continue
 
+            if (
+                operational.get(
+                    "hidden",
+                    False
+                )
+                and not include_hidden
+            ):
+                continue
+
             techniques.append(
                 method
             )
@@ -42,7 +54,9 @@ class TechniqueRegistry:
         self,
         identifier
     ):
-        for method in self.discover():
+        for method in self.discover(
+            include_hidden=True
+        ):
             operational = method.get(
                 "operational",
                 {}

@@ -197,6 +197,19 @@ class MethodSchemaValidator:
                 f"Unsupported operational privilege: {privilege}"
             )
 
+        hidden = operational.get(
+            "hidden",
+            False
+        )
+
+        if not isinstance(
+            hidden,
+            bool
+        ):
+            errors.append(
+                "operational.hidden must be true or false"
+            )
+
         deployable = operational.get(
             "deployable"
         )
