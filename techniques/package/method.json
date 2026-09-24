@@ -1,0 +1,50 @@
+{
+  "id": "payload-package",
+  "name": "Payload Package",
+  "language": "cpp",
+  "architectures": [
+    "x64",
+    "x86"
+  ],
+  "build_types": [
+    "release",
+    "debug"
+  ],
+  "operational": {
+    "alias": "package",
+    "category": "Packaging",
+    "runtime": "native",
+    "privilege": "user",
+    "deployable": true,
+    "validation": "planned"
+  },
+  "requires_payload": true,
+  "payload_types": [
+    "raw"
+  ],
+  "payload_contract": {
+    "required": true,
+    "types": [
+      "raw"
+    ],
+    "transforms": [
+      "copy"
+    ],
+    "default_transform": "copy",
+    "min_size_bytes": 1,
+    "max_size_bytes": 10485760
+  },
+  "providers": [
+    "file"
+  ],
+  "parameters": {},
+  "runtime_arguments": [],
+  "sources": [
+    {
+      "template": "main.cpp.tpl",
+      "output": "main.cpp",
+      "compile": true
+    }
+  ],
+  "output_name": "mifa-package.exe"
+}
