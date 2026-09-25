@@ -17,7 +17,7 @@
     "privilege": "user",
     "deployable": true,
     "hidden": false,
-    "validation": "build-tested"
+    "validation": "runtime-tested"
   },
   "requires_payload": false,
   "payload_types": [],

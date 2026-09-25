@@ -185,5 +185,37 @@ class TechniquesV1Tests(
         )
 
 
+    def test_validation_states(self):
+        expected = {
+            "command":
+                "runtime-tested",
+
+            "local-dll":
+                "runtime-tested",
+
+            "script":
+                "runtime-tested",
+
+            "managed":
+                "build-tested",
+        }
+
+        for alias, state in expected.items():
+            method = self.registry.get(
+                alias
+            )
+
+            self.assertEqual(
+                method[
+                    "operational"
+                ][
+                    "validation"
+                ],
+                state,
+                alias,
+            )
+
+
+
 if __name__ == "__main__":
     unittest.main()
