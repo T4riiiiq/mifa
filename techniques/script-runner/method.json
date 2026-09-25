@@ -1,0 +1,61 @@
+{
+  "id": "script-runner",
+  "name": "Script Runner",
+  "language": "cpp",
+  "architectures": [
+    "x64",
+    "x86"
+  ],
+  "build_types": [
+    "release",
+    "debug"
+  ],
+  "operational": {
+    "alias": "script",
+    "category": "Execution",
+    "runtime": "script",
+    "privilege": "user",
+    "deployable": true,
+    "hidden": false,
+    "validation": "build-tested"
+  },
+  "requires_payload": false,
+  "payload_types": [],
+  "payload_contract": {
+    "required": false,
+    "types": [],
+    "transforms": [
+      "copy"
+    ],
+    "default_transform": "copy",
+    "min_size_bytes": 0,
+    "max_size_bytes": 1
+  },
+  "providers": [],
+  "parameters": {},
+  "runtime_arguments": [
+    {
+      "name": "script_path",
+      "type": "path",
+      "required": true,
+      "description": "PowerShell, CMD, or BAT script path"
+    },
+    {
+      "name": "arguments",
+      "type": "str",
+      "required": false,
+      "description": "Optional script arguments"
+    }
+  ],
+  "sources": [
+    {
+      "template": "main.cpp.tpl",
+      "output": "main.cpp",
+      "compile": true
+    }
+  ],
+  "output_name": "mifa-script.exe",
+  "compiler_flags": [
+    "-municode"
+  ]
+}

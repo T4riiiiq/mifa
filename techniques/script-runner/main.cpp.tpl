@@ -1,0 +1,299 @@
+#include <windows.h>
+
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
+
+static std::wstring QuoteArgument(
+    const std::wstring& argument
+)
+{
+    if (
+        argument.find_first_of(
+            L" \t\""
+        ) == std::wstring::npos
+    )
+    {
+        return argument;
+    }
+
+    std::wstring result = L"\"";
+    size_t backslashes = 0;
+
+    for (wchar_t character : argument)
+    {
+        if (character == L'\\')
+        {
+            ++backslashes;
+            continue;
+        }
+
+        if (character == L'"')
+        {
+            result.append(
+                backslashes * 2 + 1,
+                L'\\'
+            );
+
+            result.push_back(
+                L'"'
+            );
+
+            backslashes = 0;
+            continue;
+        }
+
+        result.append(
+            backslashes,
+            L'\\'
+        );
+
+        backslashes = 0;
+        result.push_back(
+            character
+        );
+    }
+
+    result.append(
+        backslashes * 2,
+        L'\\'
+    );
+
+    result.push_back(
+        L'"'
+    );
+
+    return result;
+}
+
+
+static std::wstring LowerExtension(
+    const std::wstring& path
+)
+{
+    size_t dot = path.find_last_of(
+        L'.'
+    );
+
+    if (
+        dot == std::wstring::npos
+    )
+    {
+        return L"";
+    }
+
+    std::wstring extension =
+        path.substr(
+            dot
+        );
+
+    std::transform(
+        extension.begin(),
+        extension.end(),
+        extension.begin(),
+        ::towlower
+    );
+
+    return extension;
+}
+
+
+static int Launch(
+    const std::wstring& application,
+    const std::wstring& command_line
+)
+{
+    std::vector<wchar_t> mutable_command(
+        command_line.begin(),
+        command_line.end()
+    );
+
+    mutable_command.push_back(
+        L'\0'
+    );
+
+    STARTUPINFOW startup{};
+    PROCESS_INFORMATION process{};
+
+    startup.cb = sizeof(
+        startup
+    );
+
+    BOOL created = CreateProcessW(
+        application.c_str(),
+        mutable_command.data(),
+        nullptr,
+        nullptr,
+        FALSE,
+        0,
+        nullptr,
+        nullptr,
+        &startup,
+        &process
+    );
+
+    if (!created)
+    {
+        std::wcerr
+            << L"CreateProcessW failed. Error: "
+            << GetLastError()
+            << std::endl;
+
+        return 3;
+    }
+
+    std::wcout
+        << L"[+] Script process created"
+        << std::endl;
+
+    std::wcout
+        << L"PID: "
+        << process.dwProcessId
+        << std::endl;
+
+    WaitForSingleObject(
+        process.hProcess,
+        INFINITE
+    );
+
+    DWORD exit_code = 1;
+
+    GetExitCodeProcess(
+        process.hProcess,
+        &exit_code
+    );
+
+    CloseHandle(
+        process.hThread
+    );
+
+    CloseHandle(
+        process.hProcess
+    );
+
+    std::wcout
+        << L"Exit code: "
+        << exit_code
+        << std::endl;
+
+    return static_cast<int>(
+        exit_code
+    );
+}
+
+
+int wmain(
+    int argc,
+    wchar_t* argv[]
+)
+{
+    if (argc < 2)
+    {
+        std::wcerr
+            << L"Usage: mifa-script.exe "
+            << L"<script.ps1|script.cmd|script.bat> "
+            << L"[arguments...]"
+            << std::endl;
+
+        return 1;
+    }
+
+    const std::wstring script =
+        argv[1];
+
+    const std::wstring extension =
+        LowerExtension(
+            script
+        );
+
+    wchar_t system_root[
+        MAX_PATH
+    ]{};
+
+    DWORD root_length =
+        GetEnvironmentVariableW(
+            L"SystemRoot",
+            system_root,
+            MAX_PATH
+        );
+
+    if (
+        root_length == 0
+        || root_length >= MAX_PATH
+    )
+    {
+        std::wcerr
+            << L"Unable to resolve SystemRoot"
+            << std::endl;
+
+        return 2;
+    }
+
+    std::wstring application;
+    std::wstring command_line;
+
+    if (extension == L".ps1")
+    {
+        application =
+            std::wstring(
+                system_root
+            )
+            + L"\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+
+        command_line =
+            QuoteArgument(
+                application
+            )
+            + L" -NoLogo -NoProfile -File "
+            + QuoteArgument(
+                script
+            );
+    }
+    else if (
+        extension == L".cmd"
+        || extension == L".bat"
+    )
+    {
+        application =
+            std::wstring(
+                system_root
+            )
+            + L"\\System32\\cmd.exe";
+
+        command_line =
+            QuoteArgument(
+                application
+            )
+            + L" /S /C "
+            + QuoteArgument(
+                script
+            );
+    }
+    else
+    {
+        std::wcerr
+            << L"Unsupported script extension"
+            << std::endl;
+
+        return 2;
+    }
+
+    for (
+        int index = 2;
+        index < argc;
+        ++index
+    )
+    {
+        command_line += L" ";
+        command_line += QuoteArgument(
+            argv[index]
+        );
+    }
+
+    return Launch(
+        application,
+        command_line
+    );
+}

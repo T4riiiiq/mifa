@@ -1,0 +1,55 @@
+{
+  "id": "local-dll-load",
+  "name": "Local DLL Load",
+  "language": "cpp",
+  "architectures": [
+    "x64",
+    "x86"
+  ],
+  "build_types": [
+    "release",
+    "debug"
+  ],
+  "operational": {
+    "alias": "local-dll",
+    "category": "Execution",
+    "runtime": "native",
+    "privilege": "user",
+    "deployable": true,
+    "hidden": false,
+    "validation": "build-tested"
+  },
+  "requires_payload": false,
+  "payload_types": [],
+  "payload_contract": {
+    "required": false,
+    "types": [],
+    "transforms": [
+      "copy"
+    ],
+    "default_transform": "copy",
+    "min_size_bytes": 0,
+    "max_size_bytes": 1
+  },
+  "providers": [],
+  "parameters": {},
+  "runtime_arguments": [
+    {
+      "name": "dll_path",
+      "type": "path",
+      "required": true,
+      "description": "Path to a local DLL"
+    }
+  ],
+  "sources": [
+    {
+      "template": "main.cpp.tpl",
+      "output": "main.cpp",
+      "compile": true
+    }
+  ],
+  "output_name": "mifa-local-dll.exe",
+  "compiler_flags": [
+    "-municode"
+  ]
+}
