@@ -88,12 +88,6 @@ def show_techniques(
             "techniques available."
         )
 
-        if not include_hidden:
-            print(
-                "Use 'techniques --all' to "
-                "include internal pipeline methods."
-            )
-
         return
 
     print()
@@ -101,11 +95,11 @@ def show_techniques(
         f"{'Alias':<16}"
         f"{'Category':<18}"
         f"{'Runtime':<12}"
-        f"{'State':<10}"
+        f"{'Validation':<18}"
         f"Architectures"
     )
 
-    print("-" * 78)
+    print("-" * 90)
 
     for method in techniques:
         operational = method[
@@ -119,20 +113,16 @@ def show_techniques(
             )
         )
 
-        state = (
-            "internal"
-            if operational.get(
-                "hidden",
-                False
-            )
-            else "visible"
+        validation = operational.get(
+            "validation",
+            "?"
         )
 
         print(
             f"{operational['alias']:<16}"
             f"{operational['category']:<18}"
             f"{operational['runtime']:<12}"
-            f"{state:<10}"
+            f"{validation:<18}"
             f"{architectures}"
         )
 

@@ -80,7 +80,8 @@ class TransformPipeline:
 
         if method == "gzip":
             return gzip.compress(
-                data
+                data,
+                mtime=0,
             )
 
         if method == "deflate":

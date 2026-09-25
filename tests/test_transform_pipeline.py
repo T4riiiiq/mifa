@@ -71,5 +71,26 @@ class TransformPipelineTests(
         )
 
 
+    def test_gzip_header_is_deterministic(self):
+        output, metadata = (
+            self.engine.apply(
+                self.data,
+                compression="gzip",
+            )
+        )
+
+        self.assertEqual(
+            output[4:8],
+            b"\x00\x00\x00\x00",
+        )
+
+        self.assertTrue(
+            metadata[
+                "roundtrip_match"
+            ]
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
