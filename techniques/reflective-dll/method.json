@@ -1,0 +1,62 @@
+{
+  "id": "reflective-dll-injection",
+  "name": "Reflective DLL Injection",
+  "language": "cpp",
+  "architectures": [
+    "x64"
+  ],
+  "build_types": [
+    "release",
+    "debug"
+  ],
+  "operational": {
+    "alias": "reflective-dll",
+    "category": "Injection",
+    "runtime": "native",
+    "privilege": "varies",
+    "deployable": true,
+    "hidden": false,
+    "validation": "runtime-tested"
+  },
+  "requires_payload": true,
+  "payload_types": [
+    "pe"
+  ],
+  "payload_contract": {
+    "required": true,
+    "types": [
+      "pe"
+    ],
+    "transforms": [
+      "copy"
+    ],
+    "default_transform": "copy",
+    "min_size_bytes": 1,
+    "max_size_bytes": 10485760,
+    "pe_kind": "dll",
+    "required_exports": [
+      "ReflectiveLoader"
+    ]
+  },
+  "providers": [
+    "file",
+    "external"
+  ],
+  "parameters": {},
+  "runtime_arguments": [
+    {
+      "name": "pid",
+      "type": "int",
+      "required": true,
+      "description": "Target process ID"
+    }
+  ],
+  "sources": [
+    {
+      "template": "main.c.tpl",
+      "output": "main.c",
+      "compile": true
+    }
+  ],
+  "output_name": "mifa-reflective-dll.exe"
+}
