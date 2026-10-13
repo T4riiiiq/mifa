@@ -1,6 +1,5 @@
 # Mifa
 
-**Technique-first Windows payload build utility.**
 
 <p align="center">
   <img src="docs/mifa-oven.png" alt="Mifa" width="100%">
