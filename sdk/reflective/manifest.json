@@ -10,7 +10,7 @@
       "status": "runtime-tested"
     },
     "builtin": {
-      "status": "build-tested",
+      "status": "runtime-tested",
       "artifact": "sdk/reflective/builtin/reference.dll"
     }
   }

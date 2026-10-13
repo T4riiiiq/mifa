@@ -40,8 +40,8 @@ class ReflectiveBuiltinTests(
             ["ReflectiveLoader"],
         )
 
-    def test_builtin_is_not_falsely_ready(self):
-        self.assertFalse(
+    def test_builtin_is_runtime_ready(self):
+        self.assertTrue(
             self.contract.builtin_ready()
         )
 
@@ -67,7 +67,7 @@ class ReflectiveBuiltinTests(
             method["providers"],
         )
 
-    def test_build_tested_builtin_can_be_used(self):
+    def test_runtime_tested_builtin_can_be_used(self):
         provider = get_provider(
             "reflective-builtin"
         )
@@ -92,7 +92,7 @@ class ReflectiveBuiltinTests(
 
         self.assertEqual(
             result["provenance"]["validation"],
-            "build-tested",
+            "runtime-tested",
         )
 
 

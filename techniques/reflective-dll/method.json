@@ -16,7 +16,7 @@
     "privilege": "varies",
     "deployable": true,
     "hidden": false,
-    "validation": "build-tested"
+    "validation": "runtime-tested"
   },
   "requires_payload": true,
   "payload_types": [
@@ -75,7 +75,7 @@
       "providers": [
         "reflective-builtin"
       ],
-      "validation": "build-tested",
+      "validation": "runtime-tested",
       "loader_abi": 1
     }
   }
