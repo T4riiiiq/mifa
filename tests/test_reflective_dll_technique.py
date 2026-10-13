@@ -84,3 +84,46 @@ class ReflectiveDLLTechniqueTests(
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReflectiveDLLDiagnosticTests(
+    unittest.TestCase
+):
+    def test_runtime_template_has_named_win32_errors(self):
+        template = (
+            ROOT
+            / "techniques"
+            / "reflective-dll"
+            / "main.c.tpl"
+        ).read_text()
+
+        self.assertIn(
+            "FormatMessageA",
+            template
+        )
+
+        for operation in (
+            "OpenProcess",
+            "VirtualAllocEx",
+            "WriteProcessMemory",
+            "CreateRemoteThread",
+            "WaitForSingleObject",
+            "GetExitCodeThread",
+        ):
+            self.assertIn(
+                f'"{operation}"',
+                template
+            )
+
+    def test_runtime_template_avoids_numeric_only_failure(self):
+        template = (
+            ROOT
+            / "techniques"
+            / "reflective-dll"
+            / "main.c.tpl"
+        ).read_text()
+
+        self.assertNotIn(
+            "Technique failed: %d",
+            template
+        )
