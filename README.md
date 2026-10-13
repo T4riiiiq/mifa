@@ -9,43 +9,58 @@
 
 Mifa started from a simple idea: **a technique oven**.
 
-When testing Windows execution techniques, a lot of time is spent repeating the same preparation work — selecting a payload, checking compatibility, generating the build, compiling it, and validating the final artifact.
+Testing Windows execution techniques often involves repeating the same preparation steps — choosing a payload, validating compatibility, generating source, compiling, and checking the final artifact.
 
-Mifa puts that workflow in one place.
+Mifa brings that workflow into one place.
 
 ```text
 Technique → Payload → Validate → Build → Test
+```
 
-The goal is simple: less time preparing, more time testing.
-Techniques
-Mifa currently supports:
+**Less time preparing. More time testing.**
+
+## Techniques
+
 - DLL Injection
 - Remote Thread Injection
 - Process Hollowing
 - Reflective DLL Injection
-What Mifa Handles
+
+## What Mifa Handles
+
 - Payload preparation
 - Compatibility validation
 - Source generation
 - MinGW-w64 compilation
 - Build metadata
 - Post-build verification
-Payload Sources
-- Local files
-- External tools
-- msfvenom, where supported
-Requirements
+
+## Payload Sources
+
+Mifa can work with local payloads, external tools, and **msfvenom** where supported.
+
+## Requirements
+
 - Python 3
 - MinGW-w64
-- msfvenom — optional
-Usage
+- msfvenom *(optional)*
+
+## Usage
+
 Clone the repository:
+
+```bash
 git clone https://github.com/T4riiiiq/mifa.git
 cd mifa
 python3 mifa.py
+```
 
 List available techniques:
-python3 mifa.py techniques
 
-Scope
-Mifa is built for controlled and authorized security research and training environments.
+```bash
+python3 mifa.py techniques
+```
+
+## Scope
+
+Mifa is intended for controlled and authorized security research and training environments.
