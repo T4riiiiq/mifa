@@ -1,5 +1,6 @@
 # Mifa
 
+**Technique-first Windows build utility for security research.**
 
 <p align="center">
   <img src="docs/mifa-oven.png" alt="Mifa" width="100%">
@@ -18,6 +19,20 @@ Technique → Payload → Validate → Build → Test
 ```
 
 **Less time preparing. More time testing.**
+
+## Built for Security Research
+
+Mifa is designed for security researchers who need a consistent way to prepare and test Windows execution techniques in controlled environments.
+
+Instead of rebuilding the same supporting workflow for every experiment, Mifa keeps payload handling, validation, compilation, and build metadata consistent across techniques.
+
+This makes it easier to:
+
+- Reproduce technique tests
+- Compare different implementations
+- Keep build artifacts organized
+- Validate payload compatibility
+- Focus on the technique itself rather than repetitive setup
 
 ## Techniques
 
@@ -93,7 +108,7 @@ Validate
 
 ### Direct Build
 
-Mifa can also build directly without the interactive menu:
+Mifa can also run directly without the interactive menu:
 
 ```bash
 python3 mifa.py build \
@@ -103,13 +118,13 @@ python3 mifa.py build \
   --payload <payload>
 ```
 
-Additional build options are available through:
+Additional build options:
 
 ```bash
 python3 mifa.py build --help
 ```
 
-For detailed output:
+Verbose output:
 
 ```bash
 python3 mifa.py --verbose
