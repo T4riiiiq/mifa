@@ -29,6 +29,12 @@ def get_provider(
 
 
 def list_providers():
-    return sorted(
-        PROVIDERS
+    return tuple(
+        sorted(PROVIDERS)
     )
+
+
+def has_provider(
+    provider_id
+):
+    return provider_id in PROVIDERS

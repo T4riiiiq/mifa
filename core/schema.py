@@ -1,5 +1,7 @@
 import re
 
+from providers import has_provider
+
 
 class MethodSchemaValidator:
     REQUIRED_FIELDS = [
@@ -87,14 +89,6 @@ class MethodSchemaValidator:
         "planned",
         "build-tested",
         "runtime-tested"
-    }
-
-    SUPPORTED_PAYLOAD_PROVIDERS = {
-        "file",
-        "external",
-        "fixture",
-        "msfvenom",
-        "reflective-builtin"
     }
 
     OPERATIONAL_ALIAS = re.compile(
@@ -295,9 +289,8 @@ class MethodSchemaValidator:
 
             seen.add(provider)
 
-            if (
+            if not has_provider(
                 provider
-                not in self.SUPPORTED_PAYLOAD_PROVIDERS
             ):
                 errors.append(
                     f"Unsupported payload provider: "

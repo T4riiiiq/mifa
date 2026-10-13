@@ -103,10 +103,11 @@ if __name__ == "__main__":
 class ReflectiveBuiltinCompatibilityTests(
     unittest.TestCase
 ):
-    def test_provider_supported_by_compatibility_engine(self):
-        from core.compatibility import CompatibilityChecker
+    def test_provider_registered_centrally(self):
+        from providers import has_provider
 
-        self.assertIn(
-            "reflective-builtin",
-            CompatibilityChecker.SUPPORTED_PAYLOAD_PROVIDERS,
+        self.assertTrue(
+            has_provider(
+                "reflective-builtin"
+            )
         )

@@ -1,3 +1,6 @@
+from providers import has_provider
+
+
 class CompatibilityChecker:
     SUPPORTED_BUILD_TYPES = {
         "release",
@@ -13,14 +16,6 @@ class CompatibilityChecker:
 
     SUPPORTED_PAYLOAD_TRANSFORMS = {
         "copy"
-    }
-
-    SUPPORTED_PAYLOAD_PROVIDERS = {
-        "file",
-        "external",
-        "fixture",
-        "msfvenom",
-        "reflective-builtin"
     }
 
     def _payload_contract(
@@ -160,7 +155,7 @@ class CompatibilityChecker:
     ):
         errors = []
 
-        if provider not in self.SUPPORTED_PAYLOAD_PROVIDERS:
+        if not has_provider(provider):
             errors.append(
                 f"Unsupported payload provider: "
                 f"'{provider}'"

@@ -154,7 +154,7 @@ class OperationalContractTests(unittest.TestCase):
             payload_path="/tmp/payload.bin",
             payload_type="raw",
             payload_transform="copy",
-            payload_provider="fixture",
+            payload_provider="msfvenom",
         )
 
         self.assertTrue(
