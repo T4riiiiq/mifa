@@ -19,7 +19,8 @@ class CompatibilityChecker:
         "file",
         "external",
         "fixture",
-        "msfvenom"
+        "msfvenom",
+        "reflective-builtin"
     }
 
     def _payload_contract(

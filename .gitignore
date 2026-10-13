@@ -29,3 +29,7 @@ payloads/generated/
 .vscode/
 .idea/
 .DS_Store
+
+# Generated reflective build artifacts
+sdk/reflective/builtin/reference.dll
+sdk/reflective/builtin/build/

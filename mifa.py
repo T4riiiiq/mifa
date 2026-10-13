@@ -599,6 +599,9 @@ def interactive_build(
 
             "msfvenom":
                 "Generate with msfvenom",
+
+            "reflective-builtin":
+                "Mifa built-in reflective DLL",
         }
 
         display_providers = [
@@ -625,7 +628,10 @@ def interactive_build(
 
         print()
 
-        if provider == "msfvenom":
+        if provider == "reflective-builtin":
+            payload = "builtin"
+
+        elif provider == "msfvenom":
             print(
                 "Payload module"
             )

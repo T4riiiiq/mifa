@@ -16,7 +16,7 @@
     "privilege": "varies",
     "deployable": true,
     "hidden": false,
-    "validation": "runtime-tested"
+    "validation": "build-tested"
   },
   "requires_payload": true,
   "payload_types": [
@@ -39,6 +39,7 @@
     ]
   },
   "providers": [
+    "reflective-builtin",
     "file",
     "external"
   ],
@@ -58,5 +59,24 @@
       "compile": true
     }
   ],
-  "output_name": "mifa-reflective-dll.exe"
+  "output_name": "mifa-reflective-dll.exe",
+  "reflective_modes": {
+    "existing": {
+      "providers": [
+        "file",
+        "external"
+      ],
+      "validation": "runtime-tested",
+      "required_exports": [
+        "ReflectiveLoader"
+      ]
+    },
+    "builtin": {
+      "providers": [
+        "reflective-builtin"
+      ],
+      "validation": "build-tested",
+      "loader_abi": 1
+    }
+  }
 }

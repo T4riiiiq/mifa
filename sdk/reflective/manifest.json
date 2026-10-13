@@ -1,0 +1,17 @@
+{
+  "id": "mifa-reflective",
+  "name": "Mifa Reflective DLL",
+  "abi_version": 1,
+  "required_exports": [
+    "ReflectiveLoader"
+  ],
+  "modes": {
+    "existing": {
+      "status": "runtime-tested"
+    },
+    "builtin": {
+      "status": "build-tested",
+      "artifact": "sdk/reflective/builtin/reference.dll"
+    }
+  }
+}

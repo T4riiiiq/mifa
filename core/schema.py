@@ -93,7 +93,8 @@ class MethodSchemaValidator:
         "file",
         "external",
         "fixture",
-        "msfvenom"
+        "msfvenom",
+        "reflective-builtin"
     }
 
     OPERATIONAL_ALIAS = re.compile(

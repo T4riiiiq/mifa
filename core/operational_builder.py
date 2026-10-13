@@ -107,9 +107,12 @@ class OperationalBuilder:
             False
         ):
             if payload_source is None:
-                raise ValueError(
-                    "This technique requires a payload"
-                )
+                if provider_id == "reflective-builtin":
+                    payload_source = "builtin"
+                else:
+                    raise ValueError(
+                        "This technique requires a payload"
+                    )
 
             provider = get_provider(
                 provider_id

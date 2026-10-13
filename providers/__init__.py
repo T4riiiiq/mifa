@@ -1,12 +1,14 @@
 from providers.external import ExternalProvider
 from providers.file import FileProvider
 from providers.msfvenom import MsfvenomProvider
+from providers.reflective_builtin import ReflectiveBuiltinProvider
 
 
 PROVIDERS = {
     "file": FileProvider,
     "external": ExternalProvider,
     "msfvenom": MsfvenomProvider,
+    "reflective-builtin": ReflectiveBuiltinProvider,
 }
 
 
