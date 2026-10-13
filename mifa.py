@@ -7,6 +7,7 @@ from pathlib import Path
 
 from core.operational_builder import OperationalBuilder
 from core.preflight import BuildPreflight
+from core.readiness import readiness_for
 from core.reporting import ReportExporter
 from providers import list_providers
 from ui.banner import render_banner
@@ -1021,30 +1022,23 @@ def interactive_menu():
                 "operational"
             ]
 
-            validation = operational.get(
-                "validation",
-                "planned",
+            readiness = readiness_for(
+                method
             )
 
-            if validation == "runtime-tested":
-                state = (
-                    CONSOLE.theme.green(
-                        "✓ READY"
-                    )
+            if readiness["tone"] == "success":
+                state = CONSOLE.theme.green(
+                    readiness["label"]
                 )
 
-            elif validation == "build-tested":
-                state = (
-                    CONSOLE.theme.cyan(
-                        "BUILD OK"
-                    )
+            elif readiness["tone"] == "info":
+                state = CONSOLE.theme.cyan(
+                    readiness["label"]
                 )
 
             else:
-                state = (
-                    CONSOLE.theme.yellow(
-                        "PLANNED"
-                    )
+                state = CONSOLE.theme.yellow(
+                    readiness["label"]
                 )
 
             print(
@@ -1106,12 +1100,11 @@ def interactive_menu():
             "operational"
         ]
 
-        validation = operational.get(
-            "validation",
-            "planned",
+        readiness = readiness_for(
+            method
         )
 
-        if validation == "planned":
+        if not readiness["buildable"]:
             print()
 
             CONSOLE.warning(

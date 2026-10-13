@@ -6,6 +6,7 @@ from core.compiler import Compiler
 from core.generator import SourceGenerator
 from core.parameters import ParameterResolver
 from core.payloads import PayloadManager
+from core.readiness import readiness_for
 from core.schema import MethodSchemaValidator
 from core.techniques import TechniqueRegistry
 from providers import get_provider
@@ -77,6 +78,18 @@ class OperationalBuilder:
             raise ValueError(
                 f"Technique '{technique}' is not "
                 "deployable"
+            )
+
+        readiness = readiness_for(
+            method
+        )
+
+        if not readiness["buildable"]:
+            raise ValueError(
+                f"Technique '{technique}' is not "
+                f"buildable "
+                f"(validation: "
+                f"{readiness['validation']})"
             )
 
         preset = {
