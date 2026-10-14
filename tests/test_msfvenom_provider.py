@@ -144,6 +144,70 @@ sys.exit(0)
                 "x64",
             )
 
+    def test_provenance_redacts_msf_option_values(
+        self
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            fake = self._fake_msfvenom(
+                root
+            )
+
+            result = (
+                MsfvenomProvider()
+                .resolve(
+                    "windows/x64/test",
+                    binary=str(fake),
+                    format="raw",
+                    architecture="x64",
+                    output_dir=root,
+                    msf_options=[
+                        "LHOST=10.10.10.10",
+                        "PASSWORD=super-secret",
+                    ],
+                )
+            )
+
+            provenance = result[
+                "provenance"
+            ]
+
+            self.assertEqual(
+                provenance[
+                    "msf_option_keys"
+                ],
+                [
+                    "LHOST",
+                    "PASSWORD",
+                ],
+            )
+
+            self.assertTrue(
+                provenance[
+                    "msf_option_values_redacted"
+                ]
+            )
+
+            self.assertEqual(
+                provenance["binary"],
+                "fake-msfvenom",
+            )
+
+            rendered = repr(
+                provenance
+            )
+
+            self.assertNotIn(
+                "10.10.10.10",
+                rendered,
+            )
+
+            self.assertNotIn(
+                "super-secret",
+                rendered,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

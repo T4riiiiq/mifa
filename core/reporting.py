@@ -149,6 +149,37 @@ class ReportExporter:
                 f"- Producer: `{provider['producer']}`"
             )
 
+        if provider.get(
+            "binary"
+        ):
+            lines.append(
+                f"- Generator binary: `{provider['binary']}`"
+            )
+
+        option_keys = (
+            provider.get(
+                "msf_option_keys"
+            )
+            or []
+        )
+
+        if option_keys:
+            lines.append(
+                "- Generator options: `"
+                + ", ".join(
+                    str(key)
+                    for key in option_keys
+                )
+                + "`"
+            )
+
+            if provider.get(
+                "msf_option_values_redacted"
+            ):
+                lines.append(
+                    "- Generator option values: `redacted`"
+                )
+
         lines.extend([
             f"- Type: `{payload.get('type', '')}`",
             f"- Transform: `{payload.get('transform', '')}`",

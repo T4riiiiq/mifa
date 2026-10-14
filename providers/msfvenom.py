@@ -422,6 +422,7 @@ BOOL WINAPI DllMain(
             )
 
         msf_options = []
+        msf_option_keys = []
 
         for item in raw_options:
             value = str(item).strip()
@@ -450,6 +451,10 @@ BOOL WINAPI DllMain(
                     "Each msfvenom option must use "
                     "KEY=VALUE syntax"
                 )
+
+            msf_option_keys.append(
+                key.strip()
+            )
 
             msf_options.append(
                 value
@@ -631,6 +636,15 @@ BOOL WINAPI DllMain(
 
                 "compiler":
                     compiler_used,
+
+                "binary":
+                    Path(binary_path).name,
+
+                "msf_option_keys":
+                    msf_option_keys,
+
+                "msf_option_values_redacted":
+                    bool(msf_options),
 
                 "source_name":
                     output_path.name,
