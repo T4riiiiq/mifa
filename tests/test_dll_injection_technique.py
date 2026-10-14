@@ -107,10 +107,6 @@ class DLLInjectionExecutionTemplateTests(unittest.TestCase):
         self.assertIn("thread_exit_code == 0", self.template)
 
 
-
-if __name__ == "__main__":
-    unittest.main()
-
 class DLLInjectionTemplateTests(
     unittest.TestCase
 ):
@@ -138,3 +134,66 @@ class DLLInjectionTemplateTests(
             "PROCESS_QUERY_INFORMATION",
             template,
         )
+
+class DLLInjectionDiagnosticTests(
+    unittest.TestCase
+):
+    def setUp(self):
+        self.template = (
+            ROOT
+            / "techniques"
+            / "dll-injection"
+            / "main.c.tpl"
+        ).read_text(
+            encoding="utf-8"
+        )
+
+    def test_has_operation_specific_win32_diagnostics(self):
+        self.assertIn(
+            "report_win32_error",
+            self.template,
+        )
+
+        for operation in (
+            "OpenProcess",
+            "VirtualAllocEx",
+            "WriteProcessMemory",
+            "CreateRemoteThread",
+            "WaitForSingleObject",
+            "GetExitCodeThread",
+        ):
+            self.assertIn(
+                f'"{operation}"',
+                self.template,
+            )
+
+    def test_main_does_not_report_stale_last_error(self):
+        self.assertNotIn(
+            "DLL Injection failed: %d (Win32=%lu)",
+            self.template,
+        )
+
+        self.assertIn(
+            "DLL Injection failed: %d",
+            self.template,
+        )
+
+    def test_internal_failures_have_explicit_messages(self):
+        self.assertIn(
+            "Remote path write truncated",
+            self.template,
+        )
+
+        self.assertIn(
+            "LoadLibraryA returned NULL in the target process",
+            self.template,
+        )
+
+        self.assertIn(
+            "Unexpected wait status",
+            self.template,
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

