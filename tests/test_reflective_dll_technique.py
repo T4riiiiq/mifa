@@ -82,10 +82,6 @@ class ReflectiveDLLTechniqueTests(
         )
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ReflectiveDLLDiagnosticTests(
     unittest.TestCase
 ):
@@ -115,6 +111,31 @@ class ReflectiveDLLDiagnosticTests(
                 template
             )
 
+
+
+    def test_loader_completion_wording_is_precise(self):
+        template = (
+            ROOT
+            / "techniques"
+            / "reflective-dll"
+            / "main.c.tpl"
+        ).read_text()
+
+        self.assertIn(
+            "Loader thread exit value (DWORD)",
+            template,
+        )
+
+        self.assertIn(
+            "Loader thread completed",
+            template,
+        )
+
+        self.assertNotIn(
+            "[+] Technique completed",
+            template,
+        )
+
     def test_runtime_template_avoids_numeric_only_failure(self):
         template = (
             ROOT
@@ -127,3 +148,6 @@ class ReflectiveDLLDiagnosticTests(
             "Technique failed: %d",
             template
         )
+
+if __name__ == "__main__":
+    unittest.main()

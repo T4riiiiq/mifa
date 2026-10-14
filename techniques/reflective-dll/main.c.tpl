@@ -632,7 +632,7 @@ int execute_technique(
     }
 
     printf(
-        "[+] Thread exit : %lu\n",
+        "[+] Loader thread exit value (DWORD): %lu\n",
         (unsigned long)thread_exit
     );
 
@@ -723,7 +723,7 @@ int main(
     }
 
     printf(
-        "[+] Technique completed\n"
+        "[+] Loader thread completed\n"
     );
 
     return 0;
