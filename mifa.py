@@ -1302,11 +1302,6 @@ def main():
         help="Show detailed build output",
     )
 
-    if len(
-        sys.argv
-    ) == 1:
-        return interactive_menu()
-
     # Allow global UI flags before or after
     # the selected subcommand.
     ui_flags = []
@@ -1335,6 +1330,11 @@ def main():
         color=not args.no_color,
         verbose=args.verbose,
     )
+
+    # No subcommand means interactive mode.
+    # Global UI flags still configure the session.
+    if args.command is None:
+        return interactive_menu()
 
     builder = OperationalBuilder(
         ROOT
