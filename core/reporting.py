@@ -58,6 +58,36 @@ class ReportExporter:
             )
         )
 
+    def _sanitize_command_token(
+        self,
+        value
+    ):
+        text = str(value)
+
+        root = str(
+            self.root.resolve()
+        )
+
+        if text == root:
+            return "."
+
+        for separator in (
+            "/",
+            "\\",
+        ):
+            prefix = (
+                root
+                + separator
+            )
+
+            if prefix in text:
+                text = text.replace(
+                    prefix,
+                    ""
+                )
+
+        return text
+
     def render(
         self,
         build_id
@@ -110,7 +140,9 @@ class ReportExporter:
             list
         ):
             command_text = shlex.join(
-                str(item)
+                self._sanitize_command_token(
+                    item
+                )
                 for item in command
             )
         else:

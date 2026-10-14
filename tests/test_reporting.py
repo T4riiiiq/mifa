@@ -111,6 +111,107 @@ class ReportingTests(unittest.TestCase):
                 report,
             )
 
+    def test_report_does_not_expose_project_root_paths(
+        self
+    ):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            build_dir = (
+                root
+                / "builds"
+                / "K-0001"
+            )
+
+            build_dir.mkdir(
+                parents=True
+            )
+
+            source = (
+                build_dir
+                / "source"
+                / "main.c"
+            )
+
+            output = (
+                build_dir
+                / "output"
+                / "demo.exe"
+            )
+
+            manifest = {
+                "build_id": "K-0001",
+                "status": "success",
+                "created_at": "",
+                "completed_at": "",
+                "method": {
+                    "id": "demo",
+                    "name": "Demo",
+                    "language": "c",
+                },
+                "preset": {
+                    "architecture": "x64",
+                    "build_type": "release",
+                },
+                "payload": {},
+                "compiler": {
+                    "name": "gcc",
+                    "command": [
+                        "/usr/bin/gcc",
+                        str(source),
+                        "-I" + str(root / "include"),
+                        "-o",
+                        str(output),
+                    ],
+                },
+                "output": {
+                    "file": "output/demo.exe",
+                    "size_bytes": 123,
+                    "sha256": "b" * 64,
+                },
+            }
+
+            (
+                build_dir
+                / "build.json"
+            ).write_text(
+                json.dumps(
+                    manifest
+                ),
+                encoding="utf-8",
+            )
+
+            report = ReportExporter(
+                root
+            ).render(
+                "K-0001"
+            )
+
+            self.assertNotIn(
+                str(root),
+                report,
+            )
+
+            self.assertIn(
+                "builds/K-0001/source/main.c",
+                report,
+            )
+
+            self.assertIn(
+                "builds/K-0001/output/demo.exe",
+                report,
+            )
+
+            self.assertIn(
+                "-Iinclude",
+                report,
+            )
+
+            self.assertIn(
+                "/usr/bin/gcc",
+                report,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
