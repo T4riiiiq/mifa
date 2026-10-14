@@ -326,11 +326,16 @@ int main(int argc, char **argv)
     }
     else if (wait_status == WAIT_TIMEOUT)
     {
-        fprintf(
-            stderr,
-            "Thread timed out after 5000 ms\n"
+        printf(
+            "[+] Thread state : still running "
+            "after 5000 ms\n"
         );
-        result = 1;
+
+        /*
+         * A long-running thread is not a technique
+         * failure. Keep the remote memory allocated
+         * because the thread may still be using it.
+         */
     }
     else if (wait_status == WAIT_FAILED)
     {
@@ -338,6 +343,15 @@ int main(int argc, char **argv)
             stderr,
             "WaitForSingleObject failed: %lu\n",
             GetLastError()
+        );
+        result = 1;
+    }
+    else
+    {
+        fprintf(
+            stderr,
+            "Unexpected wait status: 0x%08lX\n",
+            (unsigned long)wait_status
         );
         result = 1;
     }

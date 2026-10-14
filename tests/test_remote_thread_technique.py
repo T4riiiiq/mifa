@@ -106,3 +106,44 @@ class RemoteThreadTemplateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RemoteThreadRuntimeSemanticsTests(
+    unittest.TestCase
+):
+    def setUp(self):
+        self.template = (
+            ROOT
+            / "techniques"
+            / "remote-thread"
+            / "main.c.tpl"
+        ).read_text()
+
+    def test_timeout_means_thread_still_running(self):
+        start = self.template.index(
+            "else if (wait_status == WAIT_TIMEOUT)"
+        )
+
+        end = self.template.index(
+            "else if (wait_status == WAIT_FAILED)",
+            start,
+        )
+
+        timeout_block = self.template[
+            start:end
+        ]
+
+        self.assertIn(
+            "still running",
+            timeout_block,
+        )
+
+        self.assertNotIn(
+            "result = 1",
+            timeout_block,
+        )
+
+        self.assertNotIn(
+            "VirtualFreeEx",
+            timeout_block,
+        )
