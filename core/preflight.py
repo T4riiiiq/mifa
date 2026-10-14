@@ -238,8 +238,8 @@ class BuildPreflight:
             )
             == "success"
             and exists
-            and hash_match is not False
-            and arch_match is not False
+            and hash_match is True
+            and arch_match is True
             and roundtrip is not False
         )
 
