@@ -65,10 +65,28 @@ class ProcessHollowingTechniqueTests(unittest.TestCase):
             "runtime-tested",
         )
 
-    def test_no_runtime_arguments(self):
+    def test_optional_target_runtime_argument(self):
+        args = self.method[
+            "runtime_arguments"
+        ]
+
         self.assertEqual(
-            self.method["runtime_arguments"],
-            [],
+            len(args),
+            1,
+        )
+
+        self.assertEqual(
+            args[0]["name"],
+            "target",
+        )
+
+        self.assertEqual(
+            args[0]["type"],
+            "path",
+        )
+
+        self.assertFalse(
+            args[0]["required"]
         )
 
     def test_source_contract(self):
@@ -140,6 +158,110 @@ class ProcessHollowingTemplateTests(unittest.TestCase):
             self.template,
         )
 
+
+class ProcessHollowingSemanticsTests(
+    unittest.TestCase
+):
+    def setUp(self):
+        self.core = (
+            ROOT
+            / "techniques"
+            / "process-hollowing"
+            / "execution_core.c.tpl"
+        ).read_text()
+
+    def test_entry_point_overwrite_flow_is_explicit(self):
+        self.assertIn(
+            "CREATE_SUSPENDED",
+            self.core,
+        )
+
+        self.assertIn(
+            "AddressOfEntryPoint",
+            self.core,
+        )
+
+        self.assertIn(
+            "WriteProcessMemory",
+            self.core,
+        )
+
+        self.assertIn(
+            "ResumeThread",
+            self.core,
+        )
+
+    def test_display_name_describes_variant(self):
+        self.assertEqual(
+            TechniqueRegistry(
+                ROOT / "techniques"
+            ).get(
+                "process-hollowing"
+            )["name"],
+            "Process Hollowing (Entry Point Overwrite)",
+        )
+
+
+class ProcessHollowingCorrectnessTests(
+    unittest.TestCase
+):
+    def setUp(self):
+        self.core = (
+            ROOT
+            / "techniques"
+            / "process-hollowing"
+            / "execution_core.c.tpl"
+        ).read_text()
+
+    def test_target_architecture_is_validated(self):
+        self.assertIn(
+            "IMAGE_FILE_MACHINE_AMD64",
+            self.core,
+        )
+
+        self.assertIn(
+            "IMAGE_FILE_MACHINE_I386",
+            self.core,
+        )
+
+        self.assertIn(
+            "Architecture mismatch",
+            self.core,
+        )
+
+    def test_payload_is_bounded_by_target_image(self):
+        self.assertIn(
+            "SizeOfImage",
+            self.core,
+        )
+
+        self.assertIn(
+            "payload_len > (imageSize - entryPointRVA)",
+            self.core,
+        )
+
+    def test_instruction_cache_is_flushed(self):
+        write_index = self.core.index(
+            "WriteProcessMemory"
+        )
+
+        flush_index = self.core.index(
+            "FlushInstructionCache"
+        )
+
+        resume_index = self.core.index(
+            "ResumeThread"
+        )
+
+        self.assertLess(
+            write_index,
+            flush_index,
+        )
+
+        self.assertLess(
+            flush_index,
+            resume_index,
+        )
 
 if __name__ == "__main__":
     unittest.main()

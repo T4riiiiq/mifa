@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
         target = argv[1];
     }
 
-    printf("[+] Technique : Process Hollowing\n");
+    printf("[+] Technique : Process Hollowing (Entry Point Overwrite)\n");
     printf("[+] Build arch: %s\n", g_build_arch);
     printf(
         "[+] Payload   : %llu bytes\n",

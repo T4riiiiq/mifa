@@ -1,6 +1,6 @@
 {
   "id": "process-hollowing",
-  "name": "Process Hollowing",
+  "name": "Process Hollowing (Entry Point Overwrite)",
   "language": "c",
   "architectures": [
     "x64",
@@ -41,7 +41,14 @@
     "msfvenom"
   ],
   "parameters": {},
-  "runtime_arguments": [],
+  "runtime_arguments": [
+    {
+      "name": "target",
+      "type": "path",
+      "required": false,
+      "description": "Optional target executable path"
+    }
+  ],
   "sources": [
     {
       "template": "main.c.tpl",

