@@ -1,64 +1,51 @@
 # Mifa
 
-**Technique-first Windows build utility for security research.**
+**A reproducible build and validation workflow for Windows security technique research.**
 
-<p align="center">
-  <img src="docs/mifa-oven.png" alt="Mifa" width="100%">
-</p>
+Mifa provides a consistent workflow around existing Windows security techniques.
+
+The techniques already exist. Mifa focuses on the work around testing them consistently: payload preparation, compatibility checks, source generation, compilation, validation, and build reporting.
 
 ## Why Mifa?
 
-Mifa started from a simple idea: **a technique oven**.
+Testing an existing technique often means repeating the same setup for every experiment.
 
-Testing Windows execution techniques often means repeating the same preparation work — selecting a payload, validating compatibility, generating source, compiling, and checking the final artifact.
+Mifa provides one consistent workflow that makes it easier to:
 
-Mifa puts that workflow in one place.
+- Switch between supported payload sources
+- Catch architecture and format mismatches early
+- Build technique implementations consistently
+- Preserve hashes, compiler details, and build metadata
+- Reproduce and compare previous experiments
+- Generate a report for each completed build
 
-```text
-Technique → Payload → Validate → Build → Test
-```
+## Supported Techniques
 
-**Less time preparing. More time testing.**
+| Technique | Implementation |
+|---|---|
+| DLL Injection | LoadLibrary-based DLL injection |
+| Remote Thread Injection | Remote thread execution of a raw payload |
+| Process Hollowing | Suspended-process entry-point overwrite variant |
+| Reflective DLL Injection | In-memory loading of a compatible reflective DLL |
 
-## Built for Security Research
+## Payload Sources
 
-Mifa is designed for security researchers who need a consistent way to prepare and test Windows execution techniques in controlled environments.
+Mifa supports:
 
-Instead of rebuilding the same supporting workflow for every experiment, Mifa keeps payload handling, validation, compilation, and build metadata consistent across techniques.
-
-This makes it easier to:
-
-- Reproduce technique tests
-- Compare different implementations
-- Keep build artifacts organized
-- Validate payload compatibility
-- Focus on the technique itself rather than repetitive setup
-
-## Techniques
-
-Mifa currently supports:
-
-- DLL Injection
-- Remote Thread Injection
-- Process Hollowing
-- Reflective DLL Injection
-
-## How It Works
-
-Mifa handles the common steps around each technique:
-
-- Payload preparation
-- Compatibility validation
-- Source generation
-- MinGW-w64 compilation
-- Build metadata
-- Post-build verification
-
-Payloads can come from:
-
-- Existing files
-- External tools
+- Existing local files
+- External payload generators
 - msfvenom, where supported
+- Built-in reflective DLL payloads
+
+## Workflow
+
+1. Select a technique
+2. Select the target architecture
+3. Select a payload source
+4. Validate compatibility
+5. Generate and compile the source
+6. Validate the resulting artifact
+7. Review or export the build report
 
 ## Usage
 
@@ -69,46 +56,13 @@ git clone https://github.com/T4riiiiq/mifa.git
 cd mifa
 ```
 
-Start Mifa:
+Start the interactive interface:
 
 ```bash
 python3 mifa.py
 ```
 
-Running Mifa without a command opens the interactive workflow:
-
-```text
-Select Technique
-      ↓
-Select Architecture
-      ↓
-Select Payload Source
-      ↓
-Configure Payload
-      ↓
-Review Build
-      ↓
-Build
-      ↓
-Validate
-```
-
-### Commands
-
-| Command | Purpose |
-|---|---|
-| `python3 mifa.py` | Start interactive mode |
-| `python3 mifa.py techniques` | List available techniques |
-| `python3 mifa.py payloads` | List payload providers |
-| `python3 mifa.py builds` | List recent builds |
-| `python3 mifa.py builds --all` | List all recorded builds |
-| `python3 mifa.py show <BUILD_ID>` | Show build details |
-| `python3 mifa.py preflight <BUILD_ID>` | Verify a completed build |
-| `python3 mifa.py report <BUILD_ID>` | Export a build report |
-
-### Direct Build
-
-Mifa can also run directly without the interactive menu:
+Or build directly:
 
 ```bash
 python3 mifa.py build \
@@ -118,29 +72,21 @@ python3 mifa.py build \
   --payload <payload>
 ```
 
-Additional build options:
+## Commands
 
-```bash
-python3 mifa.py build --help
-```
-
-Verbose output:
-
-```bash
-python3 mifa.py --verbose
-```
-
-Disable terminal colors:
-
-```bash
-python3 mifa.py --no-color
-```
-
-General help:
-
-```bash
-python3 mifa.py --help
-```
+| Command | Purpose |
+|---|---|
+| `python3 mifa.py` | Start interactive mode |
+| `python3 mifa.py techniques` | List available techniques |
+| `python3 mifa.py payloads` | List payload providers |
+| `python3 mifa.py builds` | List recent builds |
+| `python3 mifa.py builds --all` | List all recorded builds |
+| `python3 mifa.py show <BUILD_ID>` | Show build details |
+| `python3 mifa.py preflight <BUILD_ID>` | Validate a completed build |
+| `python3 mifa.py report <BUILD_ID>` | Generate a build report |
+| `python3 mifa.py build --help` | Show build options |
+| `python3 mifa.py --verbose` | Enable verbose output |
+| `python3 mifa.py --no-color` | Disable terminal colors |
 
 ## Requirements
 
@@ -150,4 +96,8 @@ python3 mifa.py --help
 
 ## Scope
 
-Mifa is intended for controlled and authorized security research and training environments.
+Mifa is intended for controlled and authorized security research, training, and technique validation.
+
+## License
+
+MIT
