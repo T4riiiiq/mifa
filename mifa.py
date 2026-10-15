@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -139,11 +140,13 @@ def show_techniques(
             "operational"
         ]
 
-        architectures = ", ".join(
-            method.get(
+        architectures = (
+            "x64"
+            if "x64" in method.get(
                 "architectures",
                 []
             )
+            else "-"
         )
 
         validation = operational.get(
@@ -516,49 +519,42 @@ def interactive_build(
     technique=None
 ):
     if technique is None:
-        techniques = (
-            builder.registry.discover()
-        )
-
-        technique_order = {
-            "remote-thread": 1,
-            "dll-injection": 2,
-            "reflective-dll": 3,
-            "process-hollowing": 4,
-        }
-
-        techniques = sorted(
-            techniques,
-            key=lambda method: (
-                technique_order.get(
-                    method["operational"]["alias"],
-                    999
-                ),
-                method["name"],
-            ),
-        )
+        techniques = builder.registry.discover()
 
         if not techniques:
             print()
-            print(
-                "No user-facing operational "
-                "techniques are installed yet."
+            CONSOLE.warning(
+                "No techniques installed."
             )
-            return
+            return False
 
-        aliases = [
-            method[
-                "operational"
-            ][
-                "alias"
-            ]
+        display_names = [
+            method["name"].split(
+                " (",
+                1
+            )[0]
             for method in techniques
         ]
 
-        technique = choose(
-            "\nTechnique:",
-            aliases,
+        selected_name = choose(
+            "Select technique",
+            display_names,
         )
+
+        method = next(
+            item
+            for item in techniques
+            if item["name"].split(
+                " (",
+                1
+            )[0] == selected_name
+        )
+
+        technique = method[
+            "operational"
+        ][
+            "alias"
+        ]
 
     method = builder.registry.get(
         technique
@@ -569,19 +565,29 @@ def interactive_build(
             f"Technique not found: {technique}"
         )
 
-    architecture = choose(
-        "\nArchitecture:",
-        method.get(
-            "architectures",
-            []
-        ),
-    )
+    # Current interactive release is intentionally x64-only.
+    # Backend architecture support remains unchanged.
+    architecture = "x64"
+
+    if architecture not in method.get(
+        "architectures",
+        []
+    ):
+        raise ValueError(
+            f"{method['name']} does not support x64"
+        )
+
+    display_name = method["name"].split(
+        " (",
+        1
+    )[0]
 
     provider = None
     payload = None
     payload_type = None
     transform = None
     provider_options = {}
+
     if method.get(
         "requires_payload",
         False
@@ -591,141 +597,197 @@ def interactive_build(
             []
         )
 
-        provider_labels = {
-            "file":
-                "Existing file",
+        if technique == "reflective-dll":
+            if "reflective-builtin" not in providers:
+                raise ValueError(
+                    "Built-in reflective payload "
+                    "is not available"
+                )
 
-            "external":
-                "External artifact",
-
-            "msfvenom":
-                "Generate with msfvenom",
-
-            "reflective-builtin":
-                "Mifa built-in reflective DLL",
-        }
-
-        display_providers = [
-            provider_labels.get(
-                item,
-                item
-            )
-            for item in providers
-        ]
-
-        selected_provider = choose(
-            "\nPayload:",
-            display_providers,
-        )
-
-        provider = next(
-            item
-            for item in providers
-            if provider_labels.get(
-                item,
-                item
-            ) == selected_provider
-        )
-
-        print()
-
-        if provider == "reflective-builtin":
+            provider = "reflective-builtin"
             payload = "builtin"
 
-        elif provider == "msfvenom":
-            print(
-                "Payload module"
+            print()
+            CONSOLE.heading(
+                display_name
             )
-
+            print()
             print(
                 CONSOLE.theme.dim(
-                    "  Example: windows/x64/exec"
+                    "Using Mifa built-in reflective DLL"
                 )
             )
 
-            payload = input(
-                "> "
-            ).strip()
-
         else:
-            payload = input(
-                "File path:\n> "
-            ).strip()
+            if "msfvenom" not in providers:
+                raise ValueError(
+                    "msfvenom provider is not "
+                    "available for this technique"
+                )
 
-        if provider == "external":
-            producer = input(
-                "\nProducer name [optional]:\n> "
-            ).strip()
+            provider = "msfvenom"
 
-            provider_options[
-                "producer"
-            ] = (
-                producer
-                or "external"
+            print()
+            CONSOLE.heading(
+                display_name
             )
+            print()
 
-        if provider == "msfvenom":
-            msf_contract = method.get(
+            while True:
+                print(
+                    CONSOLE.theme.bold(
+                        "Payload module"
+                    )
+                )
+                print()
+                print(
+                    CONSOLE.theme.dim(
+                        "  Example: windows/x64/exec"
+                    )
+                )
+                print()
+
+                payload = input(
+                    "> "
+                ).strip()
+
+                if not payload:
+                    print()
+                    CONSOLE.error(
+                        "Payload module is required"
+                    )
+                    print()
+                    continue
+
+                if any(
+                    char.isspace()
+                    for char in payload
+                ):
+                    print()
+                    CONSOLE.error(
+                        "Payload module must not "
+                        "contain whitespace"
+                    )
+                    print()
+                    continue
+
+                if not payload.startswith(
+                    "windows/x64/"
+                ):
+                    print()
+                    CONSOLE.error(
+                        "Interactive mode currently "
+                        "supports Windows x64 payload "
+                        "modules only"
+                    )
+                    print()
+                    continue
+
+                break
+
+            contract = method.get(
                 "payload_contract",
                 {}
             )
 
-            if (
-                msf_contract.get(
-                    "pe_kind"
-                ) == "dll"
-            ):
+            if contract.get(
+                "pe_kind"
+            ) == "dll":
                 msf_format = "dll"
             else:
                 msf_format = "raw"
 
-            provider_options[
-                "architecture"
-            ] = architecture
+            provider_options.update({
+                "architecture": architecture,
+                "platform": "windows",
+                "format": msf_format,
+            })
 
-            provider_options[
-                "platform"
-            ] = "windows"
-
-            provider_options[
-                "format"
-            ] = msf_format
-
-            print()
-            print(
-                "Options"
-            )
-
-            print(
-                CONSOLE.theme.dim(
-                    "  KEY=VALUE separated by spaces"
+            while True:
+                print()
+                print(
+                    CONSOLE.theme.bold(
+                        "Payload options"
+                    )
                 )
-            )
-
-            print(
-                CONSOLE.theme.dim(
-                    "  Press Enter to skip"
+                print()
+                print(
+                    CONSOLE.theme.dim(
+                        "  Optional msfvenom options"
+                    )
                 )
-            )
+                print(
+                    CONSOLE.theme.dim(
+                        "  Format: KEY=VALUE"
+                    )
+                )
+                print(
+                    CONSOLE.theme.dim(
+                        "  Multiple options may be "
+                        "separated by spaces"
+                    )
+                )
+                print(
+                    CONSOLE.theme.dim(
+                        '  Quote values with spaces: '
+                        'CMD="cmd.exe /c whoami"'
+                    )
+                )
+                print(
+                    CONSOLE.theme.dim(
+                        "  Press Enter to skip"
+                    )
+                )
+                print()
 
-            option_line = input(
-                "> "
-            ).strip()
+                option_line = input(
+                    "> "
+                ).strip()
 
-            if option_line.lower() in {
-                "n",
-                "no",
-                "none",
-            }:
-                option_line = ""
+                if not option_line:
+                    msf_options = []
+                    break
+
+                try:
+                    msf_options = shlex.split(
+                        option_line
+                    )
+                except ValueError as exc:
+                    print()
+                    CONSOLE.error(
+                        f"Invalid option syntax: {exc}"
+                    )
+                    continue
+
+                invalid = [
+                    item
+                    for item in msf_options
+                    if (
+                        "=" not in item
+                        or not item.split(
+                            "=",
+                            1
+                        )[0].strip()
+                        or not item.split(
+                            "=",
+                            1
+                        )[1]
+                    )
+                ]
+
+                if invalid:
+                    print()
+                    CONSOLE.error(
+                        "Each option must use "
+                        "KEY=VALUE syntax"
+                    )
+                    continue
+
+                break
 
             provider_options[
                 "msf_options"
-            ] = (
-                option_line.split()
-                if option_line
-                else []
-            )
+            ] = msf_options
 
         contract = method.get(
             "payload_contract",
@@ -742,41 +804,33 @@ def interactive_build(
 
         elif payload_types:
             payload_type = choose(
-                "\nPayload type:",
+                "Payload type",
                 payload_types,
             )
 
         transforms = contract.get(
             "transforms",
-            [
-                "copy"
-            ],
+            ["copy"],
         )
 
         transform = (
             transforms[0]
             if len(transforms) == 1
             else choose(
-                "\nPayload transform:",
+                "Payload transform",
                 transforms,
             )
         )
 
-
-    runtime_arguments = method.get(
-        "runtime_arguments",
-        []
-    )
-
     print()
     CONSOLE.heading(
-        "Build configuration"
+        "Build Review"
     )
     print()
 
     CONSOLE.label(
         "Technique",
-        technique
+        display_name
     )
 
     CONSOLE.label(
@@ -788,66 +842,59 @@ def interactive_build(
         "requires_payload",
         False
     ):
-        CONSOLE.label(
-            "Provider",
-            provider
-        )
-
-        CONSOLE.label(
-            "Payload",
-            payload
-        )
-
-        if CONSOLE.verbose:
+        if provider == "reflective-builtin":
             CONSOLE.label(
-                "Payload type",
-                payload_type
+                "Payload",
+                "Built-in reflective DLL"
             )
 
+        else:
             CONSOLE.label(
-                "Transform",
-                transform
+                "Payload",
+                payload
             )
 
-    else:
-        CONSOLE.label(
-            "Payload",
-            "not required"
-        )
-
-    if (
-        runtime_arguments
-        and CONSOLE.verbose
-    ):
-        print()
-
-        CONSOLE.heading(
-            "Runtime arguments"
-        )
-
-        for argument in runtime_arguments:
-            requirement = (
-                "required"
-                if argument.get(
-                    "required",
-                    True
+            option_keys = [
+                item.split(
+                    "=",
+                    1
+                )[0]
+                for item in provider_options.get(
+                    "msf_options",
+                    []
                 )
-                else "optional"
-            )
+            ]
 
-            CONSOLE.label(
-                argument.get(
-                    "name",
-                    "argument"
-                ),
-                (
-                    f"{argument.get('type', '?')} "
-                    f"({requirement})"
+            if option_keys:
+                redacted = ", ".join(
+                    f"{key}=<redacted>"
+                    for key in option_keys
                 )
-            )
+
+                CONSOLE.label(
+                    "Options",
+                    redacted
+                )
+
+            else:
+                CONSOLE.label(
+                    "Options",
+                    "none"
+                )
+
+    if CONSOLE.verbose:
+        CONSOLE.label(
+            "Payload type",
+            payload_type
+        )
+
+        CONSOLE.label(
+            "Transform",
+            transform
+        )
 
     confirm = input(
-        "\nBuild? [Y/n] > "
+        "\nBuild artifact? [Y/n] > "
     ).strip().lower()
 
     if confirm not in {
@@ -879,7 +926,6 @@ def interactive_build(
     )
 
     return True
-
 
 def interactive_builds():
     while True:
@@ -1014,42 +1060,33 @@ def interactive_menu():
             )
             return 0
 
+        print()
+        CONSOLE.heading(
+            "Select technique"
+        )
+        print()
+
         for index, method in enumerate(
             techniques,
             start=1,
         ):
-            operational = method[
-                "operational"
-            ]
-
-            readiness = readiness_for(
-                method
-            )
-
-            if readiness["tone"] == "success":
-                state = CONSOLE.theme.green(
-                    readiness["label"]
-                )
-
-            elif readiness["tone"] == "info":
-                state = CONSOLE.theme.cyan(
-                    readiness["label"]
-                )
-
-            else:
-                state = CONSOLE.theme.yellow(
-                    readiness["label"]
-                )
+            display_name = method[
+                "name"
+            ].split(
+                " (",
+                1
+            )[0]
 
             print(
-                f"{CONSOLE.theme.bold(index)}  "
-                f"{method['name']:<30} "
-                f"{state}"
+                f"  "
+                f"{CONSOLE.theme.cyan(index)}  "
+                f"{display_name}"
             )
 
         print()
         print(
-            CONSOLE.theme.dim(
+            "  "
+            + CONSOLE.theme.dim(
                 "q  Exit"
             )
         )
@@ -1073,7 +1110,7 @@ def interactive_menu():
         except ValueError:
             print()
             CONSOLE.error(
-                "Invalid selection."
+                "Invalid selection"
             )
             input(
                 "\nPress Enter to continue..."
@@ -1085,7 +1122,7 @@ def interactive_menu():
         ):
             print()
             CONSOLE.error(
-                "Invalid selection."
+                "Invalid selection"
             )
             input(
                 "\nPress Enter to continue..."
@@ -1096,19 +1133,18 @@ def interactive_menu():
             index
         ]
 
-        operational = method[
-            "operational"
-        ]
-
         readiness = readiness_for(
             method
         )
 
-        if not readiness["buildable"]:
+        if not readiness[
+            "buildable"
+        ]:
             print()
 
             CONSOLE.warning(
-                f"{method['name']} is not ready yet."
+                f"{method['name']} "
+                "is not available yet."
             )
 
             input(
@@ -1119,7 +1155,9 @@ def interactive_menu():
         try:
             completed = interactive_build(
                 builder,
-                technique=operational[
+                technique=method[
+                    "operational"
+                ][
                     "alias"
                 ],
             )
@@ -1136,7 +1174,6 @@ def interactive_menu():
         input(
             "\nPress Enter to continue..."
         )
-
 
 def build_parser():
     parser = argparse.ArgumentParser(
