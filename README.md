@@ -4,6 +4,10 @@
 
 **Current version:** `1.2.0`
 
+## Demo
+
+![Mifa build workflow](docs/assets/mifa-demo.gif)
+
 Mifa does not try to reinvent Windows execution or injection techniques. It standardizes the work around testing them consistently: payload preparation, compatibility checks, source generation, compilation, preflight validation, metadata capture, and build reporting.
 
 The result is a repeatable workflow where the payload, provider, architecture, and technique can be changed without rebuilding the surrounding process every time.
