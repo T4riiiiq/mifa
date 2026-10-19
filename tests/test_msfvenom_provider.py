@@ -163,7 +163,7 @@ sys.exit(0)
                     architecture="x64",
                     output_dir=root,
                     msf_options=[
-                        "LHOST=10.10.10.10",
+                        "LHOST=192.0.2.10",
                         "PASSWORD=super-secret",
                     ],
                 )
@@ -199,7 +199,7 @@ sys.exit(0)
             )
 
             self.assertNotIn(
-                "10.10.10.10",
+                "192.0.2.10",
                 rendered,
             )
 

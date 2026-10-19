@@ -104,8 +104,6 @@ class RemoteThreadTemplateTests(unittest.TestCase):
         )
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class RemoteThreadRuntimeSemanticsTests(
@@ -147,3 +145,7 @@ class RemoteThreadRuntimeSemanticsTests(
             "VirtualFreeEx",
             timeout_block,
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

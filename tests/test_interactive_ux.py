@@ -215,7 +215,7 @@ class InteractiveUxTests(unittest.TestCase):
             rendered,
         )
 
-    def test_techniques_command_hides_x86(self):
+    def test_techniques_command_shows_supported_architectures(self):
         method = make_method(
             "dll-injection",
             "DLL Injection",
@@ -244,7 +244,7 @@ class InteractiveUxTests(unittest.TestCase):
             "x64",
             rendered,
         )
-        self.assertNotIn(
+        self.assertIn(
             "x86",
             rendered,
         )

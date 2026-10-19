@@ -738,8 +738,8 @@ static int execute_technique(
     CloseHandle(process);
 
     /*
-     * The DLL remains staged on disk while it is loaded.
-     * Mifa can remove it after the target unloads/exits.
+     * The staged DLL is retained while the target
+     * continues to reference the loaded image.
      */
     return 0;
 }

@@ -14,7 +14,7 @@ ROOT = Path(
 ).resolve().parents[1]
 
 
-class V02FoundationTests(unittest.TestCase):
+class FoundationTests(unittest.TestCase):
     def test_external_provider_registered(self):
         provider = get_provider(
             "external"

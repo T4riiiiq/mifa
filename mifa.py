@@ -140,14 +140,12 @@ def show_techniques(
             "operational"
         ]
 
-        architectures = (
-            "x64"
-            if "x64" in method.get(
+        architectures = ", ".join(
+            method.get(
                 "architectures",
                 []
             )
-            else "-"
-        )
+        ) or "-"
 
         validation = operational.get(
             "validation",
@@ -565,8 +563,6 @@ def interactive_build(
             f"Technique not found: {technique}"
         )
 
-    # Current interactive release is intentionally x64-only.
-    # Backend architecture support remains unchanged.
     architecture = "x64"
 
     if architecture not in method.get(
@@ -927,120 +923,6 @@ def interactive_build(
 
     return True
 
-def interactive_builds():
-    while True:
-        print()
-        show_builds()
-
-        build_id = input(
-            "\nBuild ID "
-            "[Enter to go back]:\n> "
-        ).strip()
-
-        if not build_id:
-            return
-
-        try:
-            load_manifest(
-                build_id
-            )
-
-        except Exception as exc:
-            print(
-                f"\n[!] {exc}"
-            )
-            continue
-
-        while True:
-            print()
-            print(
-                f"Build {build_id}"
-            )
-            print("-" * 46)
-            print("[1] Preflight")
-            print("[2] Report")
-            print("[3] Details")
-            print("[0] Back")
-
-            selection = input(
-                "\n> "
-            ).strip()
-
-            try:
-                if selection == "1":
-                    result = BuildPreflight(
-                        ROOT
-                    ).verify(
-                        build_id
-                    )
-
-                    roundtrip = result[
-                        "payload_roundtrip"
-                    ]
-
-                    print()
-                    print("Preflight")
-                    print("-" * 46)
-
-                    print(
-                        f"Status      : "
-                        f"{result['status']}"
-                    )
-
-                    print(
-                        f"Hash match  : "
-                        f"{result['hash_match']}"
-                    )
-
-                    print(
-                        f"Architecture: "
-                        f"{result['actual_arch']} "
-                        f"(expected "
-                        f"{result['expected_arch']})"
-                    )
-
-                    print(
-                        f"Arch match  : "
-                        f"{result['arch_match']}"
-                    )
-
-                    print(
-                        "Round-trip  : "
-                        + (
-                            "N/A"
-                            if roundtrip is None
-                            else str(roundtrip)
-                        )
-                    )
-
-                    print(
-                        f"Result      : "
-                        f"{result['result']}"
-                    )
-
-                elif selection == "2":
-                    export_report(
-                        build_id
-                    )
-
-                elif selection == "3":
-                    show_build(
-                        build_id
-                    )
-
-                elif selection == "0":
-                    break
-
-                else:
-                    print(
-                        "\nInvalid selection."
-                    )
-
-            except Exception as exc:
-                print(
-                    f"\n[!] {exc}"
-                )
-
 
 def interactive_menu():
     builder = OperationalBuilder(
@@ -1192,7 +1074,7 @@ def build_parser():
 
     build = sub.add_parser(
         "build",
-    help="Build an operational technique"
+        help="Build an operational technique",
     )
 
     build.add_argument(
@@ -1247,9 +1129,6 @@ def build_parser():
     )
 
 
-
-
-
     build.add_argument(
         "--build-type",
         choices=[
@@ -1267,7 +1146,7 @@ def build_parser():
 
     techniques = sub.add_parser(
         "techniques",
-    help="List available techniques"
+        help="List available techniques",
     )
 
     techniques.add_argument(
@@ -1290,7 +1169,7 @@ def build_parser():
 
     show = sub.add_parser(
         "show",
-    help="Show build manifest"
+        help="Show build manifest",
     )
 
     show.add_argument(
@@ -1299,7 +1178,7 @@ def build_parser():
 
     report = sub.add_parser(
         "report",
-    help="Export build report"
+        help="Export build report",
     )
 
     report.add_argument(
@@ -1308,12 +1187,12 @@ def build_parser():
 
     sub.add_parser(
         "payloads",
-    help="List payload providers"
+        help="List payload providers",
     )
 
     preflight = sub.add_parser(
         "preflight",
-    help="Verify a completed build"
+        help="Verify a completed build",
     )
 
     preflight.add_argument(

